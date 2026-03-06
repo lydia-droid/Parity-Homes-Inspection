@@ -1,0 +1,1847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Parity Homes — CHAP Property Inspection</title>
+<style>
+:root {
+  --green: #1a4fa0;
+  --green-hover: #163d80;
+  --green-light: #2563eb;
+  --green-pale: #eff6ff;
+  --amber: #b87200;
+  --amber-pale: #fff8e6;
+  --red: #c0392b;
+  --red-pale: #fef0ef;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-700: #374151;
+  --gray-900: #111827;
+  --white: #ffffff;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+  --shadow: 0 2px 8px rgba(0,0,0,0.12);
+  --radius: 8px;
+  --radius-lg: 12px;
+  --transition: 0.15s ease;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  background: var(--gray-100);
+  color: var(--gray-900);
+  min-height: 100vh;
+}
+
+.app { min-height: 100vh; display: flex; flex-direction: column; }
+.view { display: none; flex: 1; flex-direction: column; }
+.view.active { display: flex; }
+
+/* HEADER */
+.header {
+  background: var(--green);
+  color: white;
+  padding: 14px 16px 10px;
+  flex-shrink: 0;
+}
+.header-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.header h1 { font-size: 17px; font-weight: 700; }
+.header p { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+.header-actions { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+
+/* PROGRESS BAR */
+.progress-bar { height: 4px; background: rgba(255,255,255,0.3); border-radius: 2px; margin-top: 10px; }
+.progress-fill { height: 100%; background: white; border-radius: 2px; transition: width 0.4s ease; }
+
+/* TABS */
+.tabs-container {
+  background: white;
+  border-bottom: 1px solid var(--gray-200);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+.tabs-container::-webkit-scrollbar { display: none; }
+.tabs { display: flex; min-width: max-content; }
+.tab {
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gray-500);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+  transition: var(--transition);
+  user-select: none;
+}
+.tab.active { color: var(--green); border-bottom-color: var(--green); }
+.tab-dot {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--gray-300);
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.tab-dot.filled { background: var(--green); }
+
+/* SCROLL AREA */
+.scroll-content { flex: 1; overflow-y: auto; padding: 14px; -webkit-overflow-scrolling: touch; }
+
+/* SECTION HEADER */
+.section-header {
+  background: var(--green-pale);
+  border-left: 4px solid var(--green);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+.section-header h2 { font-size: 15px; font-weight: 700; color: var(--green); }
+.section-header p { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
+
+/* CARD */
+.card {
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--gray-200);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+/* FIELD */
+.field { padding: 14px 14px 12px; border-bottom: 1px solid var(--gray-100); }
+.field:last-child { border-bottom: none; }
+.field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-700);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1.3;
+}
+.required-star { color: var(--red); margin-left: 2px; }
+
+/* OPTION BUTTONS (radio / checkbox) */
+.options { display: flex; flex-direction: column; gap: 6px; }
+.options.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+.option-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: var(--transition);
+  user-select: none;
+  font-size: 14px;
+  background: white;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+  color: var(--gray-900);
+}
+.option-btn:active { transform: scale(0.98); }
+.option-btn.selected {
+  border-color: var(--green);
+  background: var(--green-pale);
+  color: var(--green);
+  font-weight: 500;
+}
+.check-icon {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--gray-300);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  font-size: 12px;
+  font-weight: 700;
+}
+.option-btn.selected .check-icon {
+  background: var(--green);
+  border-color: var(--green);
+  color: white;
+}
+.check-icon.sq { border-radius: 4px; }
+
+/* TEXT INPUTS */
+.text-input, .textarea-input, .date-input {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1.5px solid var(--gray-300);
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--gray-900);
+  background: white;
+  transition: border-color var(--transition);
+  -webkit-appearance: none;
+}
+.text-input:focus, .textarea-input:focus, .date-input:focus {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(26,79,160,0.15);
+}
+.textarea-input { min-height: 80px; resize: vertical; }
+
+.other-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+.other-inline .option-btn { flex: 0 0 auto; width: auto; }
+.other-inline .text-input { flex: 1; padding: 10px 12px; }
+
+/* PHOTO AREA */
+.photo-area {
+  border: 2px dashed var(--gray-300);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-top: 4px;
+  background: var(--gray-50);
+}
+.photo-area-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.photo-area-label { font-size: 11px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px; }
+.photo-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--green);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: inherit;
+}
+.photo-btn:active { background: var(--green-hover); }
+.photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
+.photo-thumb {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--gray-200);
+  border: 1px solid var(--gray-200);
+}
+.photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.remove-photo-btn {
+  position: absolute;
+  top: 3px; right: 3px;
+  width: 22px; height: 22px;
+  background: rgba(0,0,0,0.65);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.photo-input { display: none; }
+.photo-count { font-size: 11px; color: var(--gray-500); margin-top: 6px; text-align: center; }
+.photo-empty { text-align: center; padding: 8px 0; color: var(--gray-400); font-size: 12px; }
+
+/* PER-FIELD PHOTO WIDGET */
+.field-photo-widget { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--gray-200); }
+.field-photo-row { display: flex; align-items: center; gap: 8px; }
+.photo-btn-sm {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 10px; background: var(--green-pale); color: var(--green);
+  border: 1.5px solid var(--green); border-radius: 6px;
+  font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit;
+  white-space: nowrap; flex-shrink: 0;
+}
+.photo-btn-sm:active { background: var(--green); color: white; }
+.photo-count-sm { font-size: 11px; color: var(--gray-500); }
+.photo-grid-sm { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.photo-thumb-sm {
+  position: relative; width: 66px; height: 66px;
+  border-radius: 6px; overflow: hidden;
+  border: 1px solid var(--gray-200); flex-shrink: 0;
+}
+.photo-thumb-sm img { width: 100%; height: 100%; object-fit: cover; }
+.remove-photo-sm {
+  position: absolute; top: 2px; right: 2px;
+  width: 18px; height: 18px; background: rgba(0,0,0,0.65);
+  color: white; border: none; border-radius: 50%;
+  font-size: 14px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+}
+
+/* BUTTONS */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: var(--transition);
+  font-family: inherit;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--green); color: white; }
+.btn-primary:active { background: var(--green-hover); }
+.btn-secondary { background: white; color: var(--green); border: 2px solid var(--green); }
+.btn-danger { background: var(--red); color: white; }
+.btn-ghost { background: transparent; color: white; padding: 6px 10px; font-size: 13px; border: 1.5px solid rgba(255,255,255,0.5); border-radius: 6px; }
+.btn-sm { padding: 7px 12px; font-size: 13px; }
+.btn-icon { background: none; border: none; color: var(--gray-500); cursor: pointer; padding: 6px; font-size: 18px; display: flex; align-items: center; }
+
+/* ACTION BAR */
+.action-bar {
+  background: white;
+  border-top: 1px solid var(--gray-200);
+  padding: 10px 14px;
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+}
+.action-bar .btn { flex: 1; }
+
+/* HOME VIEW */
+.home-header {
+  background: var(--green);
+  color: white;
+  padding: 20px 18px;
+  flex-shrink: 0;
+}
+.home-header-top { display: flex; align-items: flex-start; gap: 10px; }
+.home-header h1 { font-size: 22px; font-weight: 800; }
+.home-header .subtitle { font-size: 13px; opacity: 0.8; margin-bottom: 16px; }
+.home-content { flex: 1; overflow-y: auto; padding: 14px; }
+
+.stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+.stat-card { background: white; border-radius: var(--radius); padding: 14px; border: 1px solid var(--gray-200); text-align: center; }
+.stat-number { font-size: 26px; font-weight: 800; color: var(--green); }
+.stat-label { font-size: 10px; color: var(--gray-500); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.4px; }
+
+.section-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.section-title-row h2 { font-size: 14px; font-weight: 700; color: var(--gray-700); text-transform: uppercase; letter-spacing: 0.5px; }
+
+.inspection-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  border: 1.5px solid var(--gray-200);
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+.inspection-card:active { border-color: var(--green); background: var(--green-pale); }
+.inspection-card .address { font-size: 15px; font-weight: 600; line-height: 1.3; }
+.inspection-card .meta { font-size: 12px; color: var(--gray-500); margin-top: 4px; }
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-weight: 600;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.badge-draft { background: var(--amber-pale); color: var(--amber); }
+.badge-submitted { background: var(--green-pale); color: var(--green); }
+
+.empty-state { text-align: center; padding: 40px 20px; color: var(--gray-400); }
+.empty-icon { font-size: 44px; margin-bottom: 12px; }
+.empty-state h3 { font-size: 16px; font-weight: 600; color: var(--gray-500); }
+.empty-state p { font-size: 13px; margin-top: 6px; line-height: 1.5; }
+
+/* TOAST */
+.toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background: var(--gray-900);
+  color: white;
+  padding: 10px 18px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.25s, transform 0.25s;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ACTION SHEET */
+.action-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 800;
+  display: none;
+  align-items: flex-end;
+}
+.action-overlay.show { display: flex; }
+.action-sheet {
+  background: white;
+  width: 100%;
+  border-radius: 16px 16px 0 0;
+  padding: 12px 16px 28px;
+}
+.action-sheet-title { font-size: 14px; font-weight: 600; color: var(--gray-500); text-align: center; padding: 8px 0 12px; border-bottom: 1px solid var(--gray-200); margin-bottom: 6px; }
+.action-sheet-btn {
+  display: block;
+  width: 100%;
+  padding: 14px 12px;
+  text-align: left;
+  background: none;
+  border: none;
+  font-size: 15px;
+  cursor: pointer;
+  border-radius: var(--radius);
+  font-family: inherit;
+  color: var(--gray-900);
+}
+.action-sheet-btn:hover { background: var(--gray-100); }
+.action-sheet-btn.danger { color: var(--red); }
+.action-sheet-cancel { color: var(--gray-500) !important; margin-top: 6px; border-top: 1px solid var(--gray-200) !important; padding-top: 14px !important; }
+
+/* CONFIRM MODAL */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 900;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  width: 100%;
+  max-width: 360px;
+}
+.modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
+.modal p { font-size: 14px; color: var(--gray-500); margin-bottom: 20px; line-height: 1.5; }
+.modal-actions { display: flex; gap: 10px; }
+.modal-actions .btn { flex: 1; }
+
+/* SETTINGS MODAL */
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 900;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+}
+.settings-overlay.show { display: flex; }
+.settings-sheet {
+  background: white;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: 24px 20px 32px;
+  width: 100%;
+  max-width: 620px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.settings-sheet h3 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+.settings-sheet .settings-sub { font-size: 13px; color: var(--gray-500); margin-bottom: 20px; }
+.settings-field { margin-bottom: 14px; }
+.settings-field label { display: block; font-size: 12px; font-weight: 600; color: var(--gray-700); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.4px; }
+.settings-field input { width: 100%; padding: 10px 12px; border: 1.5px solid var(--gray-200); border-radius: var(--radius); font-size: 14px; font-family: inherit; outline: none; }
+.settings-field input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(26,79,160,0.15); }
+.settings-field .hint { font-size: 11px; color: var(--gray-400); margin-top: 4px; }
+.settings-status { font-size: 13px; margin: 10px 0; min-height: 20px; }
+.settings-divider { border: none; border-top: 1px solid var(--gray-200); margin: 18px 0; }
+.btn-gear { background: rgba(255,255,255,0.2); border: none; color: white; width: 34px; height: 34px; border-radius: 8px; font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.btn-gear:active { background: rgba(255,255,255,0.35); }
+
+@media (min-width: 600px) {
+  .scroll-content { max-width: 620px; margin: 0 auto; }
+  .action-bar { max-width: 620px; margin: 0 auto; width: 100%; }
+  .home-content { max-width: 620px; margin: 0 auto; }
+}
+
+@media print {
+  .tabs-container, .action-bar, .header-actions, .btn-ghost { display: none !important; }
+  .card { box-shadow: none; border: 1px solid #ccc; }
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Hidden photo input -->
+  <input type="file" class="photo-input" id="photoInput" accept="image/*" capture="environment" multiple>
+
+  <!-- Action Sheet -->
+  <div class="action-overlay" id="actionOverlay">
+    <div class="action-sheet">
+      <div class="action-sheet-title" id="actionSheetTitle"></div>
+      <div id="actionSheetButtons"></div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="settings-overlay" id="settingsOverlay" onclick="if(event.target===this)App.closeSettings()">
+    <div class="settings-sheet">
+      <h3>⚙️ Database Settings</h3>
+      <p class="settings-sub">Connect to NocoDB to automatically sync submitted inspections.</p>
+
+      <div class="settings-field">
+        <label>NocoDB Base URL</label>
+        <input type="url" id="settingsUrl" placeholder="https://app.nocodb.com" autocomplete="off" autocorrect="off" spellcheck="false">
+        <div class="hint">Leave as default for NocoDB Cloud.</div>
+      </div>
+      <div class="settings-field">
+        <label>API Token</label>
+        <input type="password" id="settingsToken" placeholder="Paste your API token here" autocomplete="off">
+        <div class="hint">Found in NocoDB → Team &amp; Settings → API Tokens.</div>
+      </div>
+      <div class="settings-field">
+        <label>Table ID</label>
+        <input type="text" id="settingsTableId" placeholder="e.g. md_xxxxxxxxxxxxxxxx" autocomplete="off" autocorrect="off" spellcheck="false">
+        <div class="hint">In NocoDB, open your table → Details tab → copy the Table ID.</div>
+      </div>
+
+      <button class="btn btn-secondary" style="width:100%;margin-bottom:8px" onclick="App.testNocoDB()">🔌 Test Connection</button>
+      <div class="settings-status" id="settingsStatus"></div>
+
+      <hr class="settings-divider">
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-secondary" style="flex:1" onclick="App.closeSettings()">Cancel</button>
+        <button class="btn btn-primary" style="flex:1" onclick="App.saveSettings()">Save</button>
+      </div>
+
+      <hr class="settings-divider">
+      <div style="font-size:12px;color:var(--gray-500);line-height:1.6">
+        <strong style="color:var(--gray-700)">NocoDB table columns required:</strong><br>
+        Address · Neighborhood · Inspector · Inspection Date · Submitted At · Structural Damage · Historical Fabric · Facade Condition · Front Door Condition · Front Padlock · Front Windows · Rear Door Condition · Rear Padlock · Rear Window Condition · Roof Condition · Electrical Line Location · Electrical Line Elevation · Sewer Line Location · Water Line - City Side · Water Line - House Side · Water Meter Present · Back Yard Condition · Hazards to Pedestrians · Hazard Description · Squatter Signs · Squatter Notes · Action Items · Notes · App Record ID
+        <br><br>All columns should be <strong>Single line text</strong> type, except <em>Back Yard Condition</em>, <em>Squatter Signs</em>, <em>Action Items</em>, <em>Hazard Description</em>, and <em>Notes</em> which should be <strong>Long text</strong>.
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <h3 id="modalTitle">Confirm</h3>
+      <p id="modalBody"></p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
+        <button class="btn btn-danger" id="modalConfirmBtn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== HOME VIEW ========== -->
+  <div class="view active" id="homeView">
+    <div class="home-header">
+      <div class="home-header-top" style="flex-direction: row; align-items: flex-start; justify-content: space-between; gap: 2px; margin-bottom: 16px;">
+        <div>
+          <div style="font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; opacity: 0.7; font-weight: 500;">Parity Homes</div>
+          <h1 style="font-size: 24px; font-weight: 800; letter-spacing: -0.3px;">Property Onboarding</h1>
+        </div>
+        <button class="btn-gear" onclick="App.openSettings()" title="Database Settings">⚙️</button>
+      </div>
+      <button class="btn btn-primary" onclick="App.newInspection()" style="width: 100%; font-size: 16px; padding: 14px; background: white; color: var(--green);">
+        + New Property Inspection
+      </button>
+    </div>
+
+    <div class="home-content">
+      <div class="stats-row" id="statsRow">
+        <div class="stat-card"><div class="stat-number" id="statTotal">0</div><div class="stat-label">Total</div></div>
+        <div class="stat-card"><div class="stat-number" id="statDraft">0</div><div class="stat-label">Drafts</div></div>
+        <div class="stat-card"><div class="stat-number" id="statSubmitted">0</div><div class="stat-label">Submitted</div></div>
+      </div>
+
+      <div class="section-title-row">
+        <h2>Inspections</h2>
+      </div>
+      <div id="inspectionList"></div>
+    </div>
+  </div>
+
+  <!-- ========== FORM VIEW ========== -->
+  <div class="view" id="formView">
+    <div class="header">
+      <div class="header-top">
+        <div>
+          <h1>CHAP Onboarding</h1>
+          <p id="formSubtitle">New Inspection</p>
+        </div>
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <button class="btn btn-ghost btn-sm" onclick="App.showFormOptions()">⋯</button>
+          <button class="btn btn-ghost btn-sm" onclick="App.backToHome()">← Home</button>
+        </div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+      </div>
+    </div>
+
+    <div class="tabs-container">
+      <div class="tabs" id="formTabs"></div>
+    </div>
+
+    <div class="scroll-content" id="formContent"></div>
+
+    <div class="action-bar">
+      <button class="btn btn-secondary" id="prevBtn" onclick="App.prevSection()" style="flex: 0 0 100px;">← Back</button>
+      <button class="btn btn-primary" id="nextBtn" onclick="App.nextSection()">Next →</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+
+// =========================================================
+// SECTIONS DEFINITION
+// =========================================================
+const SECTIONS = [
+  { id: 'property',   label: 'Property',        emoji: '📋' },
+  { id: 'structure',  label: 'Structure',        emoji: '🏗️' },
+  { id: 'facade',     label: 'Facade',           emoji: '🧱' },
+  { id: 'entrance',   label: 'Front Entry',      emoji: '🚪' },
+  { id: 'rear',       label: 'Rear',             emoji: '🏘️' },
+  { id: 'roof',       label: 'Roof & Utilities', emoji: '🔧' },
+  { id: 'site',       label: 'Site Conditions',  emoji: '🌿' }
+];
+
+// =========================================================
+// BLANK INSPECTION TEMPLATE
+// =========================================================
+function newInspectionTemplate() {
+  return {
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    submittedAt: null,
+    // Property
+    inspectorName: '',
+    neighborhood: '',
+    address: '',
+    inspectionDate: new Date().toISOString().slice(0, 10),
+    // Structure
+    structuralDamage: '',
+    structuralDamageNextSteps: '', structuralDamageUrgency: '',
+    historicalFabric: '',
+    notes: '',
+    // Facade
+    facadeCondition: '',
+    facadeConditionNextSteps: '', facadeConditionUrgency: '',
+    facadeMaterial: '',
+    corniceCondition: '',
+    corniceConditionNextSteps: '', corniceConditionUrgency: '',
+    corniceMaterial: '',
+    corniceOther: '',
+    // Entrance
+    frontDoorCondition: '',
+    frontDoorConditionNextSteps: '', frontDoorConditionUrgency: '',
+    frontDoorMaterial: '',
+    doorSurroundCondition: '',
+    doorSurroundConditionNextSteps: '', doorSurroundConditionUrgency: '',
+    doorSurroundMaterial: '',
+    frontPadlock: '',
+    englishBasement: '',
+    engBasementDoorMaterial: '',
+    // Rear
+    rearWallCondition: '',
+    rearWallConditionNextSteps: '', rearWallConditionUrgency: '',
+    rearWallConfig: '',
+    lpWallCondition: '',
+    lpWallConditionNextSteps: '', lpWallConditionUrgency: '',
+    lpWallMaterial: [],
+    rearDoorCondition: '',
+    rearDoorConditionNextSteps: '', rearDoorConditionUrgency: '',
+    rearDoorMaterial: '',
+    rearPadlock: '',
+    rearWindowCondition: '',
+    rearWindows1stFloor: '',
+    // Windows
+    frontWindowsCondition: '',
+    frontWindows1stFloor: [],
+    // Roof & Utilities
+    roofCondition: '',
+    roofConditionNextSteps: '', roofConditionUrgency: '',
+    roofStyle: '',
+    gasLineLocation: '',
+    waterLineLocation: '',
+    sewerLineLocation: '',
+    electricalLineLocation: '',
+    electricalLineElevation: '',
+    waterLineCitySide: '',
+    waterLineHouseSide: '',
+    waterMeterPresent: '',
+    // Site
+    backYardCondition: [],
+    hazardsPresent: '',
+    hazardsToPedestrians: '',
+    squatterSigns: [],
+    squatterSignsNextSteps: '', squatterSignsUrgency: '',
+    squatterOther: '',
+    // Photos keyed by field name (created on demand)
+    photos: {}
+  };
+}
+
+// =========================================================
+// APP
+// =========================================================
+const App = {
+  inspections: [],
+  current: null,
+  sectionIdx: 0,
+  photoTarget: null,
+  _modalCallback: null,
+
+  // ---- INIT ----
+  init() {
+    try {
+      this.inspections = JSON.parse(localStorage.getItem('parity_inspections') || '[]');
+    } catch(e) { this.inspections = []; }
+
+    this.renderHome();
+
+    // Photo input handler
+    document.getElementById('photoInput').addEventListener('change', e => {
+      const files = Array.from(e.target.files);
+      let loaded = 0;
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = ev => {
+          if (this.photoTarget && this.current) {
+            if (!this.current.photos[this.photoTarget]) this.current.photos[this.photoTarget] = [];
+            this.current.photos[this.photoTarget].push(ev.target.result);
+            loaded++;
+            if (loaded === files.length) {
+              this.saveDraft();
+              this.renderFormSection();
+              this.showToast(`📷 ${files.length} photo${files.length > 1 ? 's' : ''} added`);
+            }
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+      e.target.value = '';
+    });
+
+    // Overlay click to close
+    document.getElementById('actionOverlay').addEventListener('click', e => {
+      if (e.target === document.getElementById('actionOverlay')) this.closeActionSheet();
+    });
+    document.getElementById('modalOverlay').addEventListener('click', e => {
+      if (e.target === document.getElementById('modalOverlay')) this.closeModal();
+    });
+  },
+
+  // ---- STORAGE ----
+  save() {
+    try {
+      localStorage.setItem('parity_inspections', JSON.stringify(this.inspections));
+    } catch(e) {
+      this.showToast('⚠️ Storage full — export inspections to free space');
+    }
+  },
+
+  saveDraft() {
+    if (!this.current) return;
+    this.current.updatedAt = new Date().toISOString();
+    const idx = this.inspections.findIndex(i => i.id === this.current.id);
+    if (idx >= 0) this.inspections[idx] = this.current;
+    else this.inspections.unshift(this.current);
+    this.save();
+  },
+
+  // ---- NAVIGATION ----
+  newInspection() {
+    this.current = newInspectionTemplate();
+    this.sectionIdx = 0;
+    this.showView('formView');
+    this.renderForm();
+  },
+
+  editInspection(id) {
+    const insp = this.inspections.find(i => i.id === id);
+    if (!insp) return;
+    this.current = JSON.parse(JSON.stringify(insp));
+    this.sectionIdx = 0;
+    this.showView('formView');
+    this.renderForm();
+  },
+
+  backToHome() {
+    if (this.current) {
+      this.saveDraft();
+      this.showToast('✓ Draft saved');
+    }
+    this.current = null;
+    this.showView('homeView');
+    this.renderHome();
+  },
+
+  showView(id) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  },
+
+  nextSection() {
+    if (this.sectionIdx < SECTIONS.length - 1) {
+      this.saveDraft();
+      this.sectionIdx++;
+      this.renderForm();
+      document.getElementById('formContent').scrollTop = 0;
+    } else {
+      this.submitInspection();
+    }
+  },
+
+  prevSection() {
+    if (this.sectionIdx > 0) {
+      this.sectionIdx--;
+      this.renderForm();
+      document.getElementById('formContent').scrollTop = 0;
+    }
+  },
+
+  setSection(idx) {
+    this.saveDraft();
+    this.sectionIdx = idx;
+    this.renderForm();
+    document.getElementById('formContent').scrollTop = 0;
+  },
+
+  // ---- PHOTOS ----
+  addPhoto(sectionId) {
+    this.photoTarget = sectionId;
+    document.getElementById('photoInput').click();
+  },
+
+  removePhoto(sectionId, idx) {
+    if (!this.current) return;
+    this.current.photos[sectionId].splice(idx, 1);
+    this.saveDraft();
+    this.renderFormSection();
+  },
+
+  // ---- FIELD UPDATES ----
+  setField(key, value) {
+    if (!this.current) return;
+    this.current[key] = value;
+    this.saveDraft();
+    this.updateTabDots();
+    this.updateProgress();
+  },
+
+  toggleMulti(key, value) {
+    if (!this.current) return;
+    const arr = Array.isArray(this.current[key]) ? [...this.current[key]] : [];
+    const idx = arr.indexOf(value);
+    if (idx >= 0) arr.splice(idx, 1);
+    else arr.push(value);
+    this.current[key] = arr;
+    this.saveDraft();
+    this.renderFormSection();
+  },
+
+  // ---- SUBMIT ----
+  submitInspection() {
+    if (!this.current) return;
+    const missing = [];
+    if (!this.current.inspectorName) missing.push('Inspector Name');
+    if (!this.current.address) missing.push('Street Address');
+    if (missing.length) {
+      this.showConfirm(
+        '⚠️ Required Fields Missing',
+        `Please fill in the following before submitting: ${missing.join(' and ')}.`,
+        () => { this.sectionIdx = 0; this.renderForm(); document.getElementById('formContent').scrollTop = 0; }
+      );
+      document.getElementById('modalConfirmBtn').textContent = 'Go to Property';
+      document.getElementById('modalConfirmBtn').className = 'btn btn-primary';
+      return;
+    }
+    this.showConfirm(
+      'Submit Inspection',
+      `Submit the inspection for ${this.current.address}? It will be marked as submitted but can still be edited.`,
+      async () => {
+        this.current.submittedAt = new Date().toISOString();
+        this.saveDraft();
+        this.showToast('✅ Inspection submitted!');
+        setTimeout(() => this.backToHome(), 1200);
+
+        // Run NocoDB sync and email in parallel
+        const [syncResult, emailResult] = await Promise.all([
+          this.syncToNocoDB(this.current),
+          this.sendReportEmail(this.current)
+        ]);
+
+        if (syncResult.reason !== 'not-configured' && !syncResult.ok) {
+          setTimeout(() => this.showToast('⚠️ NocoDB sync failed'), 1600);
+        }
+        if (emailResult.reason === 'network-error') {
+          // Silently skip — likely running locally without the API endpoint
+        } else if (!emailResult.ok) {
+          setTimeout(() => this.showToast('⚠️ Report email failed'), 2200);
+        } else {
+          setTimeout(() => this.showToast('📧 Report emailed'), 2200);
+        }
+      }
+    );
+  },
+
+  // ---- DELETE ----
+  deleteInspection(id) {
+    const insp = this.inspections.find(i => i.id === id);
+    const addr = insp ? (insp.address || 'this inspection') : 'this inspection';
+    this.showConfirm(
+      'Delete Inspection',
+      `Permanently delete the inspection for "${addr}"? This cannot be undone.`,
+      () => {
+        this.inspections = this.inspections.filter(i => i.id !== id);
+        this.save();
+        if (this.current && this.current.id === id) {
+          this.current = null;
+          this.showView('homeView');
+        }
+        this.renderHome();
+        this.showToast('🗑️ Inspection deleted');
+      }
+    );
+  },
+
+  // ---- SETTINGS ----
+  openSettings() {
+    const s = this.getNocoDBSettings();
+    document.getElementById('settingsUrl').value = s.url || 'https://app.nocodb.com';
+    document.getElementById('settingsToken').value = s.token || '';
+    document.getElementById('settingsTableId').value = s.tableId || '';
+    document.getElementById('settingsStatus').textContent = '';
+    document.getElementById('settingsOverlay').classList.add('show');
+  },
+
+  closeSettings() {
+    document.getElementById('settingsOverlay').classList.remove('show');
+  },
+
+  saveSettings() {
+    const url = document.getElementById('settingsUrl').value.trim().replace(/\/$/, '');
+    const token = document.getElementById('settingsToken').value.trim();
+    const tableId = document.getElementById('settingsTableId').value.trim();
+    localStorage.setItem('nocodb_settings', JSON.stringify({ url, token, tableId }));
+    this.closeSettings();
+    this.showToast('✅ Settings saved');
+  },
+
+  getNocoDBSettings() {
+    return {
+      url: 'https://app.nocodb.com',
+      token: '_yDyQixfrPT1q97ZWueTFVJ3WdNb57-8RXiW4Zpp',
+      tableId: 'm5db1rj92ask4v2'
+    };
+  },
+
+  async testNocoDB() {
+    const statusEl = document.getElementById('settingsStatus');
+    const url = document.getElementById('settingsUrl').value.trim().replace(/\/$/, '');
+    const token = document.getElementById('settingsToken').value.trim();
+    const tableId = document.getElementById('settingsTableId').value.trim();
+    if (!url || !token || !tableId) {
+      statusEl.style.color = 'var(--red)';
+      statusEl.textContent = '⚠️ Please fill in all three fields first.';
+      return;
+    }
+    statusEl.style.color = 'var(--gray-500)';
+    statusEl.textContent = 'Testing…';
+    try {
+      const res = await fetch(`${url}/api/v2/tables/${tableId}/records?limit=1`, {
+        headers: { 'xc-token': token }
+      });
+      if (res.ok) {
+        statusEl.style.color = 'var(--green)';
+        statusEl.textContent = '✅ Connection successful!';
+      } else {
+        const body = await res.json().catch(() => ({}));
+        statusEl.style.color = 'var(--red)';
+        statusEl.textContent = `❌ Error ${res.status}: ${body.msg || 'Check your token and table ID.'}`;
+      }
+    } catch(e) {
+      statusEl.style.color = 'var(--red)';
+      statusEl.textContent = '❌ Could not reach NocoDB. Check the URL.';
+    }
+  },
+
+  buildNocoDBRecord(insp) {
+    const v = x => x || '';
+    const arr = x => Array.isArray(x) ? x.join(', ') : (x || '');
+    // Build action items summary (mirrors the report logic)
+    const actions = [];
+    if (['B - Minimal','C - Moderate','D - Significant'].includes(insp.historicalFabric))
+      actions.push('Schedule CHAP stabilization');
+    if (insp.frontPadlock === 'No') actions.push('Add padlock — front door [Urgent]');
+    if (insp.rearPadlock === 'No') actions.push('Add padlock — rear door [Urgent]');
+    const unsecWin = [];
+    if (insp.frontWindowsCondition === 'Unsecured') unsecWin.push('front');
+    if (insp.rearWindowCondition === 'Unsecured') unsecWin.push('rear');
+    if (unsecWin.length) actions.push(`Secure ${unsecWin.join(' and ')} windows [Urgent]`);
+    if (insp.sewerLineLocation === 'Not present/unknown') actions.push('Apply for sewer vault install w/ DPW');
+    if (insp.waterLineCitySide === 'Galvanized') actions.push('Replace city-side water line with copper');
+    if (insp.waterLineHouseSide === 'Galvanized') actions.push('Replace house-side water line with copper');
+    if (insp.waterMeterPresent === 'No') actions.push('Apply for water meter install w/ DPW');
+    if (insp.hazardsPresent === 'Yes' && insp.hazardsToPedestrians) actions.push(`Hazards to pedestrians: ${insp.hazardsToPedestrians} [Urgent]`);
+    if (Array.isArray(insp.squatterSigns) && insp.squatterSigns.length > 0) actions.push('Initiate eviction procedures [Urgent]');
+    return {
+      'Address':                    v(insp.address),
+      'Neighborhood':               v(insp.neighborhood),
+      'Inspector':                  v(insp.inspectorName),
+      'Inspection Date':            v(insp.inspectionDate),
+      'Submitted At':               v(insp.submittedAt),
+      'Structural Damage':          v(insp.structuralDamage),
+      'Historical Fabric':          v(insp.historicalFabric),
+      'Facade Condition':           v(insp.facadeCondition),
+      'Front Door Condition':       v(insp.frontDoorCondition),
+      'Front Padlock':              v(insp.frontPadlock),
+      'Front Windows':              v(insp.frontWindowsCondition),
+      'Rear Door Condition':        v(insp.rearDoorCondition),
+      'Rear Padlock':               v(insp.rearPadlock),
+      'Rear Window Condition':      v(insp.rearWindowCondition),
+      'Roof Condition':             v(insp.roofCondition),
+      'Electrical Line Location':   v(insp.electricalLineLocation),
+      'Electrical Line Elevation':  v(insp.electricalLineElevation),
+      'Sewer Line Location':        v(insp.sewerLineLocation),
+      'Water Line - City Side':     v(insp.waterLineCitySide),
+      'Water Line - House Side':    v(insp.waterLineHouseSide),
+      'Water Meter Present':        v(insp.waterMeterPresent),
+      'Back Yard Condition':        arr(insp.backYardCondition),
+      'Hazards to Pedestrians':     v(insp.hazardsPresent),
+      'Hazard Description':         v(insp.hazardsToPedestrians),
+      'Squatter Signs':             arr(insp.squatterSigns),
+      'Squatter Notes':             v(insp.squatterOther),
+      'Action Items':               actions.join('\n'),
+      'Notes':                      v(insp.notes),
+      'App Record ID':              v(insp.id),
+    };
+  },
+
+  async syncToNocoDB(insp) {
+    const s = this.getNocoDBSettings();
+    if (!s.url || !s.token || !s.tableId) return { ok: false, reason: 'not-configured' };
+    try {
+      const res = await fetch(`${s.url}/api/v2/tables/${s.tableId}/records`, {
+        method: 'POST',
+        headers: { 'xc-token': s.token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.buildNocoDBRecord(insp))
+      });
+      return { ok: res.ok, status: res.status };
+    } catch(e) {
+      return { ok: false, reason: 'network-error', error: e };
+    }
+  },
+
+  async sendReportEmail(insp) {
+    try {
+      // Strip photos before sending — base64 images are too large for an API payload
+      const { photos, ...inspData } = insp;
+      const res = await fetch('/api/send-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(inspData)
+      });
+      return { ok: res.ok, status: res.status };
+    } catch(e) {
+      // fetch() throws if the endpoint doesn't exist (e.g. running locally)
+      return { ok: false, reason: 'network-error', error: e };
+    }
+  },
+
+  // ---- EXPORT ----
+  exportJSON(id) {
+    const insp = (id && this.inspections.find(i => i.id === id)) || this.current;
+    if (!insp) return;
+    // Export without base64 photos for a lightweight JSON, photos separate
+    const exportData = { ...insp };
+    const data = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const slug = (insp.address || 'inspection').replace(/[^a-z0-9]/gi, '_').toLowerCase().slice(0, 30);
+    a.download = `parity_${slug}_${insp.id.slice(-6)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    this.showToast('📥 JSON exported');
+  },
+
+  exportReport(id) {
+    const insp = (id && this.inspections.find(i => i.id === id)) || this.current;
+    if (!insp) return;
+    const html = this.buildReportHTML(insp);
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const slug = (insp.address || 'inspection').replace(/[^a-z0-9]/gi, '_').toLowerCase().slice(0, 30);
+    a.download = `parity_report_${slug}_${insp.id.slice(-6)}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+    this.showToast('📄 HTML report exported');
+  },
+
+  exportPDF(id) {
+    const insp = (id && this.inspections.find(i => i.id === id)) || this.current;
+    if (!insp) return;
+    this.showToast('⏳ Generating PDF…');
+
+    // Strip <script> tags — not needed for iframe rendering, and avoids
+    // waiting on CDN loads that would delay the iframe onload event
+    let html = this.buildReportHTML(insp).replace(/<script\b[\s\S]*?<\/script>/gi, '');
+
+    const filename = 'CHAP-Report-' + (insp.address || 'Inspection').replace(/[^a-zA-Z0-9]/g, '-') + (insp.inspectionDate ? '-' + insp.inspectionDate : '') + '.pdf';
+
+    // Render into a hidden iframe so the full document styles are preserved.
+    // An off-screen div causes html2canvas to produce a blank image.
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:850px;height:1200px;border:none;';
+    document.body.appendChild(iframe);
+
+    const cleanup = () => { if (document.body.contains(iframe)) document.body.removeChild(iframe); };
+
+    iframe.onload = () => {
+      try {
+        const iDoc = iframe.contentDocument;
+        iDoc.querySelectorAll('.no-print').forEach(el => el.remove());
+        html2pdf().set({
+          margin: [12, 12, 12, 12],
+          filename: filename,
+          image: { type: 'jpeg', quality: 0.95 },
+          html2canvas: { scale: 2, useCORS: true, logging: false },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        }).from(iDoc.body).save().then(() => {
+          cleanup();
+          this.showToast('✅ PDF downloaded!');
+        }).catch(err => {
+          cleanup();
+          this.showToast('❌ PDF generation failed');
+          console.error('PDF error:', err);
+        });
+      } catch(e) {
+        cleanup();
+        this.showToast('❌ PDF generation failed');
+        console.error('PDF error:', e);
+      }
+    };
+
+    iframe.contentDocument.open();
+    iframe.contentDocument.write(html);
+    iframe.contentDocument.close();
+  },
+
+  // ---- HOME RENDER ----
+  renderHome() {
+    const total = this.inspections.length;
+    const submitted = this.inspections.filter(i => i.submittedAt).length;
+    const drafts = total - submitted;
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statDraft').textContent = drafts;
+    document.getElementById('statSubmitted').textContent = submitted;
+
+    const list = document.getElementById('inspectionList');
+    if (total === 0) {
+      list.innerHTML = `<div class="empty-state">
+        <div class="empty-icon">🏚️</div>
+        <h3>No inspections yet</h3>
+        <p>Tap "New Property Inspection" above to start your first CHAP onboarding analysis.</p>
+      </div>`;
+      return;
+    }
+
+    list.innerHTML = this.inspections.map(insp => {
+      const d = new Date(insp.updatedAt);
+      const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const isSubmitted = !!insp.submittedAt;
+      const photoCount = Object.values(insp.photos || {}).flat().length;
+      return `<div class="inspection-card" onclick="App.editInspection('${insp.id}')">
+        <div style="flex: 1; min-width: 0;">
+          <div class="address">${insp.address || 'Untitled Property'}</div>
+          <div class="meta">${insp.neighborhood || '—'} &bull; ${dateStr}${insp.inspectorName ? ' &bull; ' + insp.inspectorName : ''}${photoCount ? ' &bull; 📷 ' + photoCount : ''}</div>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0;">
+          <span class="badge ${isSubmitted ? 'badge-submitted' : 'badge-draft'}">${isSubmitted ? 'Submitted' : 'Draft'}</span>
+          <button class="btn-icon" onclick="event.stopPropagation(); App.showInspectionMenu('${insp.id}')">⋯</button>
+        </div>
+      </div>`;
+    }).join('');
+  },
+
+  showInspectionMenu(id) {
+    const insp = this.inspections.find(i => i.id === id);
+    if (!insp) return;
+    this.showActionSheet(insp.address || 'Inspection', [
+      { label: '✏️  Edit Inspection', action: () => this.editInspection(id) },
+      { label: '📥  Export JSON Data', action: () => this.exportJSON(id) },
+      { label: '📄  Download PDF Report', action: () => this.exportPDF(id) },
+      { label: '🗑️  Delete', danger: true, action: () => this.deleteInspection(id) }
+    ]);
+  },
+
+  showFormOptions() {
+    this.showActionSheet('Inspection Options', [
+      { label: '📥  Export JSON Data', action: () => this.exportJSON() },
+      { label: '📄  Download PDF Report', action: () => this.exportPDF() },
+      { label: '🗑️  Delete This Inspection', danger: true, action: () => { if(this.current) this.deleteInspection(this.current.id); } }
+    ]);
+  },
+
+  // ---- FORM RENDER ----
+  renderForm() {
+    document.getElementById('formSubtitle').textContent = this.current.address || 'New Inspection';
+    this.renderTabs();
+    this.renderFormSection();
+    this.updateProgress();
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    prevBtn.style.display = this.sectionIdx === 0 ? 'none' : '';
+    nextBtn.textContent = this.sectionIdx === SECTIONS.length - 1 ? '✓ Submit' : 'Next →';
+    nextBtn.style.background = this.sectionIdx === SECTIONS.length - 1 ? '#1a4fa0' : '';
+  },
+
+  renderTabs() {
+    const container = document.getElementById('formTabs');
+    container.innerHTML = SECTIONS.map((s, i) => {
+      const filled = this.isSectionFilled(i);
+      return `<div class="tab ${i === this.sectionIdx ? 'active' : ''}" onclick="App.setSection(${i})">
+        ${s.emoji} ${s.label}<span class="tab-dot ${filled ? 'filled' : ''}"></span>
+      </div>`;
+    }).join('');
+    const activeTab = container.querySelector('.tab.active');
+    if (activeTab) activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  },
+
+  updateTabDots() {
+    document.querySelectorAll('.tab-dot').forEach((dot, i) => {
+      dot.classList.toggle('filled', this.isSectionFilled(i));
+    });
+  },
+
+  isSectionFilled(i) {
+    const c = this.current;
+    if (!c) return false;
+    switch(SECTIONS[i].id) {
+      case 'property':  return !!(c.inspectorName && c.neighborhood && c.address);
+      case 'structure': return !!(c.structuralDamage && c.historicalFabric);
+      case 'facade':    return !!(c.facadeCondition && c.facadeMaterial && c.corniceCondition && c.corniceMaterial);
+      case 'entrance':  return !!(c.frontDoorCondition && c.frontDoorMaterial && c.doorSurroundCondition && c.frontPadlock && c.englishBasement);
+      case 'rear':      return !!(c.rearWallCondition && c.rearWallConfig && c.rearDoorCondition && c.rearDoorMaterial);
+      case 'windows':   return !!(c.frontWindowsCondition && c.frontWindows1stFloor.length);
+      case 'roof':      return !!(c.roofCondition && c.roofStyle);
+      case 'site':      return !!(c.backYardCondition.length || c.hazardsToPedestrians || c.waterMeterPresent);
+      default: return false;
+    }
+  },
+
+  updateProgress() {
+    const filled = SECTIONS.filter((_, i) => this.isSectionFilled(i)).length;
+    document.getElementById('progressFill').style.width = Math.round((filled / SECTIONS.length) * 100) + '%';
+  },
+
+  renderFormSection() {
+    const sid = SECTIONS[this.sectionIdx].id;
+    document.getElementById('formContent').innerHTML = this.buildSectionHTML(sid);
+  },
+
+  // ---- SECTION HTML BUILDER ----
+  buildSectionHTML(sid) {
+    const c = this.current;
+
+    // Helper: escape HTML attribute values
+    const esc = s => (s || '').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    // Radio group builder
+    // Note: values stored in data-val to avoid double-quote conflicts inside onclick=""
+    const radio = (key, opts, required = true) => {
+      const val = c[key] || '';
+      return `<div class="options">${opts.map(opt => `
+        <button type="button" class="option-btn ${val === opt ? 'selected' : ''}"
+          data-key="${key}" data-val="${esc(opt)}"
+          onclick="App.setField(this.dataset.key, this.dataset.val); App.renderFormSection()">
+          <span class="check-icon">${val === opt ? '✓' : ''}</span>
+          <span>${opt}</span>
+        </button>`).join('')}</div>`;
+    };
+
+    // Checkbox group builder
+    const checkboxes = (key, opts) => {
+      const arr = Array.isArray(c[key]) ? c[key] : [];
+      return `<div class="options">${opts.map(opt => `
+        <button type="button" class="option-btn ${arr.includes(opt) ? 'selected' : ''}"
+          data-key="${key}" data-val="${esc(opt)}"
+          onclick="App.toggleMulti(this.dataset.key, this.dataset.val)">
+          <span class="check-icon sq">${arr.includes(opt) ? '✓' : ''}</span>
+          <span>${opt}</span>
+        </button>`).join('')}</div>`;
+    };
+
+    // Conditional follow-up block: recommended next steps + urgency
+    const followUp = (key) => `
+      <div style="margin-top:6px;padding:10px 12px 6px;background:var(--amber-pale);border-left:3px solid var(--amber);border-radius:0 6px 6px 0;">
+        ${field('Recommended Next Steps', false, `<textarea class="textarea-input" placeholder="Describe recommended actions…" oninput="App.setField('${key}NextSteps', this.value)">${esc(c[key+'NextSteps']||'')}</textarea>`, key+'NextSteps')}
+        ${field('Urgency', false, radio(key+'Urgency', ['Urgent', 'Not urgent'], false), key+'Urgency')}
+      </div>`;
+
+    // Compact per-question photo widget
+    const fieldPhotos = (key) => {
+      const imgs = c.photos[key] || [];
+      return `<div class="field-photo-widget">
+        <div class="field-photo-row">
+          <button type="button" class="photo-btn-sm" onclick="App.addPhoto('${key}')">📷 Add photo</button>
+          ${imgs.length ? `<span class="photo-count-sm">${imgs.length} photo${imgs.length > 1 ? 's' : ''}</span>` : ''}
+        </div>
+        ${imgs.length ? `<div class="photo-grid-sm">${imgs.map((src, i) => `
+          <div class="photo-thumb-sm">
+            <img src="${src}" alt="Photo" loading="lazy">
+            <button type="button" class="remove-photo-sm"
+              data-key="${key}" data-idx="${i}"
+              onclick="App.removePhoto(this.dataset.key, parseInt(this.dataset.idx))">×</button>
+          </div>`).join('')}</div>` : ''}
+      </div>`;
+    };
+
+    // Field wrapper — photoKey adds a per-field photo widget
+    const field = (label, required, content, photoKey = null) =>
+      `<div class="field"><div class="field-label">${label}${required ? '<span class="required-star">*</span>' : ''}</div>${content}${photoKey ? fieldPhotos(photoKey) : ''}</div>`;
+
+    const textField = (label, key, placeholder = '', required = false) =>
+      field(label, required, `<input type="text" class="text-input" placeholder="${placeholder}" value="${esc(c[key])}" oninput="App.setField('${key}', this.value)">`, key);
+
+    const textarea = (label, key, required = false) =>
+      field(label, required, `<textarea class="textarea-input" placeholder="Enter notes…" oninput="App.setField('${key}', this.value)">${esc(c[key])}</textarea>`, key);
+
+    // ============================================
+    switch(sid) {
+
+      // ---- PROPERTY INFO ----
+      case 'property': return `
+        <div class="section-header"><h2>📋 Property Information</h2><p>Basic details about the property and inspector</p></div>
+        <div class="card">
+          ${field('Inspector Name', true, `<input type="text" class="text-input" placeholder="e.g. Marvin / Fred" value="${esc(c.inspectorName)}" oninput="App.setField('inspectorName', this.value)">`)}
+          ${field('Neighborhood', true, `<input type="text" class="text-input" placeholder="e.g. Harlem Park" value="${esc(c.neighborhood)}" oninput="App.setField('neighborhood', this.value)">`)}
+          ${field('Street Address', true, `<input type="text" class="text-input" placeholder="e.g. 705 N. Carrollton Ave" value="${esc(c.address)}" oninput="App.setField('address', this.value)">`)}
+          ${field('Inspection Date', true, `<input type="date" class="date-input" value="${esc(c.inspectionDate)}" oninput="App.setField('inspectionDate', this.value)">`)}
+          <div class="field">${fieldPhotos('property')}</div>
+        </div>`;
+
+      // ---- STRUCTURE ----
+      case 'structure': return `
+        <div class="section-header"><h2>🏗️ Structure & Overview</h2><p>Overall structural assessment and historical fabric</p></div>
+        <div class="card">
+          ${field('Structural Damage', true, radio('structuralDamage', ['Minor', 'Moderate', 'Major', 'N/A']), 'structuralDamage')}
+          ${ ['Minor','Moderate','Major'].includes(c.structuralDamage) ? followUp('structuralDamage') : '' }
+        </div>
+        <div class="card">
+          ${field('Historical Fabric', true, radio('historicalFabric', ['A - Non-existing', 'B - Minimal', 'C - Moderate', 'D - Significant']), 'historicalFabric')}
+        </div>
+        <div class="card">
+          ${textarea('Notes', 'notes')}
+        </div>`;
+
+      // ---- FACADE & CORNICE ----
+      case 'facade': return `
+        <div class="section-header"><h2>🧱 Facade & Cornice</h2><p>Front facade condition, materials, and cornice details</p></div>
+        <div class="card">
+          ${field('Facade Condition', true, radio('facadeCondition', ['Intact', 'At risk of collapsing', 'Partially collapsed', 'Not present']), 'facadeCondition')}
+          ${ ['At risk of collapsing','Partially collapsed'].includes(c.facadeCondition) ? followUp('facadeCondition') : '' }
+        </div>
+        <div class="card">
+          ${field('Facade Material', true, radio('facadeMaterial', ['Raw brick', 'Painted brick', 'Formstone', 'Rubber coated brick', 'Not present']), 'facadeMaterial')}
+        </div>
+        <div class="card">
+          ${field('Cornice Condition', true, radio('corniceCondition', ['Intact', 'Secured', 'At risk of collapsing', 'Partially collapsed', 'Totally collapsed', 'Not Present', 'N/A']), 'corniceCondition')}
+          ${ ['At risk of collapsing','Partially collapsed','Totally collapsed'].includes(c.corniceCondition) ? followUp('corniceCondition') : '' }
+        </div>
+        <div class="card">
+          ${field('Cornice Material', true, `
+            ${radio('corniceMaterial', ['Wood', 'Vinyl', 'N/A'])}
+            <div class="other-inline" style="margin-top: 8px;">
+              <button type="button" class="option-btn ${c.corniceMaterial === '__other__' ? 'selected' : ''}"
+                onclick="App.setField('corniceMaterial', '__other__'); App.renderFormSection();"
+                style="flex: 0 0 auto; width: auto; padding: 10px 12px;">
+                <span class="check-icon">${c.corniceMaterial === '__other__' ? '✓' : ''}</span>
+                <span>Other</span>
+              </button>
+              <input type="text" class="text-input" placeholder="Specify material…"
+                value="${esc(c.corniceOther)}"
+                oninput="App.setField('corniceMaterial', '__other__'); App.setField('corniceOther', this.value)">
+            </div>
+          `, 'corniceMaterial')}
+        </div>`;
+
+      // ---- FRONT ENTRANCE ----
+      case 'entrance': return `
+        <div class="section-header"><h2>🚪 Front Entrance</h2><p>Front door, door surround, padlock, and basement</p></div>
+        <div class="card">
+          ${field('Front Door Condition', true, radio('frontDoorCondition', ['Intact', 'Unsecured', 'At risk of collapsing', 'Partially collapsed', 'Totally collapsed', 'N/A']), 'frontDoorCondition')}
+          ${ ['At risk of collapsing','Partially collapsed','Totally collapsed'].includes(c.frontDoorCondition) ? followUp('frontDoorCondition') : '' }
+        </div>
+        <div class="card">
+          ${field('Front Door Material', true, radio('frontDoorMaterial', ['Steel 4-panel', 'Steel 6-panel', 'Wood single door', 'Wood double door', 'Boarded', 'Cinderblocked', 'Not present']), 'frontDoorMaterial')}
+        </div>
+        <div class="card">
+          ${field('Door Surround Condition', true, radio('doorSurroundCondition', ['Intact', 'At risk of collapsing', 'Partially collapsed', 'Totally collapsed', 'Not present', 'N/A']), 'doorSurroundCondition')}
+          ${ ['At risk of collapsing','Partially collapsed','Totally collapsed'].includes(c.doorSurroundCondition) ? followUp('doorSurroundCondition') : '' }
+        </div>
+        <div class="card">
+          ${field('Door Surround Material', true, radio('doorSurroundMaterial', ['Brick', 'Formstone', 'Wood', 'Not present']), 'doorSurroundMaterial')}
+        </div>
+        <div class="card">
+          ${field('Functional padlock on front door?', true, radio('frontPadlock', ['Yes', 'No', 'N/A']), 'frontPadlock')}
+        </div>
+        <div class="card">
+          ${field('English Basement?', true, radio('englishBasement', ['No', 'Yes']), 'englishBasement')}
+          ${field('English Basement Door Material', true, radio('engBasementDoorMaterial', ['Brick', 'Formstone', 'Wood', 'N/A']), 'engBasementDoorMaterial')}
+        </div>
+        <div class="card">
+          ${field('Front Windows Condition', true, radio('frontWindowsCondition', ['Intact', 'Unsecured', 'At risk of collapsing', 'Partially collapsed', 'Totally collapsed', 'N/A']), 'frontWindowsCondition')}
+        </div>
+        <div class="card">
+          ${field('Front Windows 1st Floor (check all that apply)', true, checkboxes('frontWindows1stFloor', ['Boarded', 'Cinderblocked', 'Double hung, single panel', 'Double hung, six panel', 'Single hung, single panel', 'Single hung, six panel', 'Not present']), 'frontWindows1stFloor')}
+        </div>`;
+
+      // ---- REAR ----
+      case 'rear': return `
+        <div class="section-header"><h2>🏘️ Rear of Property</h2><p>Rear wall, door, windows, and yard configuration</p></div>
+        <div class="card">
+          ${field('Rear Wall Condition', true, radio('rearWallCondition', ['Intact', 'At risk of collapsing', 'Partially collapsed', 'Totally collapsed']), 'rearWallCondition')}
+          ${ ['At risk of collapsing','Partially collapsed','Totally collapsed'].includes(c.rearWallCondition) ? followUp('rearWallCondition') : '' }
+        </div>
+        <div class="card">
+          ${field('Rear Wall Configuration', true, radio('rearWallConfig', ['L-wall', 'P-wall', 'Square']), 'rearWallConfig')}
+        </div>
+        <div class="card">
+          ${field('L- or P-Wall Condition', false, radio('lpWallCondition', ['Intact', 'At risk of collapsing', 'Partially collapsed', 'Totally collapsed', 'N/A']), 'lpWallCondition')}
+          ${ ['At risk of collapsing','Partially collapsed','Totally collapsed'].includes(c.lpWallCondition) ? followUp('lpWallCondition') : '' }
+        </div>
+        <div class="card">
+          ${field('L- or P-Wall Material (check all that apply)', false, checkboxes('lpWallMaterial', ['Raw brick', 'Painted brick', 'Rubber coated brick', 'Stucco', 'Vinyl siding', 'Wood shingles', 'N/A']), 'lpWallMaterial')}
+        </div>
+        <div class="card">
+          ${field('Rear Door Condition', true, radio('rearDoorCondition', ['Intact', 'Unsecured', 'At risk of collapsing', 'Partially collapsed', 'Totally collapsed', 'N/A']), 'rearDoorCondition')}
+          ${ ['At risk of collapsing','Partially collapsed','Totally collapsed'].includes(c.rearDoorCondition) ? followUp('rearDoorCondition') : '' }
+        </div>
+        <div class="card">
+          ${field('Rear Door Material', true, radio('rearDoorMaterial', ['Steel 4-panel', 'Steel 6-panel', 'Wood single door', 'Wood double door', 'Boarded', 'Cinderblocked', 'Not present']), 'rearDoorMaterial')}
+        </div>
+        <div class="card">
+          ${field('Functional padlock on rear door?', true, radio('rearPadlock', ['Yes', 'No', 'N/A']), 'rearPadlock')}
+        </div>
+        <div class="card">
+          ${field('Rear Window Condition', true, radio('rearWindowCondition', ['Intact', 'Unsecured', 'At risk of collapsing', 'Partially collapsed', 'Totally collapsed', 'N/A']), 'rearWindowCondition')}
+        </div>
+        <div class="card">
+          ${field('Rear Windows 1st Floor', true, radio('rearWindows1stFloor', ['Boarded', 'Cinderblocked', 'Double hung, single panel', 'Double hung, six panel', 'Single hung, single panel', 'Single hung, six panel', 'Not present']), 'rearWindows1stFloor')}
+        </div>`;
+
+      // ---- WINDOWS ----
+
+      // ---- ROOF & UTILITIES ----
+      case 'roof': return `
+        <div class="section-header"><h2>🔧 Roof & Utilities</h2><p>Roof condition, style, and utility line locations</p></div>
+        <div class="card">
+          ${field('Roof Condition', true, radio('roofCondition', ['Intact', 'At risk of collapsing', 'Partially collapsed', 'Totally collapsed', 'Unknown']), 'roofCondition')}
+          ${ ['At risk of collapsing','Totally collapsed'].includes(c.roofCondition) ? followUp('roofCondition') : '' }
+        </div>
+        <div class="card">
+          ${field('Roof Style', true, radio('roofStyle', ['Flat', 'Gable', 'Unknown']), 'roofStyle')}
+        </div>
+        <div class="card">
+          ${field('Gas Line Location', false, radio('gasLineLocation', ['Front, door side', 'Front, opposite door side', 'Rear, door side', 'Rear, opposite front door side', 'Not present/Unknown']), 'gasLineLocation')}
+        </div>
+        <div class="card">
+          ${field('Water Vault / Line Location', false, radio('waterLineLocation', ['Front, door side', 'Front, opposite door side', 'Rear, door side', 'Rear, opposite front door side', 'Not present/Unknown']), 'waterLineLocation')}
+        </div>
+        <div class="card">
+          ${field('Sewer Line Location', false, radio('sewerLineLocation', ['Front, door side', 'Front, opposite door side', 'Rear, door side', 'Rear, opposite front door side', 'Not present/unknown']), 'sewerLineLocation')}
+        </div>
+        <div class="card">
+          ${field('Electrical Line Location', false, radio('electricalLineLocation', ['Rear, door side', 'Rear, opposite front door side', 'Not present/unknown']), 'electricalLineLocation')}
+          ${field('Electrical Line Elevation', false, radio('electricalLineElevation', ['1st floor', '2nd floor', '3rd floor', 'Not present/unknown']), 'electricalLineElevation')}
+        </div>
+        <div class="card">
+          ${field('Water lines — city side material', false, radio('waterLineCitySide', ['Copper', 'Galvanized'], false), 'waterLineCitySide')}
+          ${field('Water lines — house side material', false, radio('waterLineHouseSide', ['Copper', 'Galvanized'], false), 'waterLineHouseSide')}
+        </div>`;
+
+      // ---- SITE CONDITIONS ----
+      case 'site': return `
+        <div class="section-header"><h2>🌿 Site Conditions</h2><p>Backyard, hazards, and signs of squatter activity</p></div>
+        <div class="card">
+          ${field('Back Yard Condition (check all that apply)', false, checkboxes('backYardCondition', ['Construction/building debris', 'General debris', 'Hazardous debris', 'Overgrown vegetation']), 'backYardCondition')}
+        </div>
+        <div class="card">
+          ${field('Is water meter present?', false, radio('waterMeterPresent', ['Yes', 'No', 'Unsure']), 'waterMeterPresent')}
+        </div>
+        <div class="card">
+          ${field('Are there any hazards to pedestrians?', false, radio('hazardsPresent', ['Yes', 'No'], false), 'hazardsPresent')}
+          ${ c.hazardsPresent === 'Yes' ? field('Describe the hazards', false, `<textarea class="textarea-input" placeholder="Describe the hazards…" oninput="App.setField('hazardsToPedestrians', this.value)">${esc(c.hazardsToPedestrians)}</textarea>`, 'hazardsToPedestrians') : '' }
+        </div>
+        <div class="card">
+          ${field('Signs of Squatter Activity (check all that apply)', false, checkboxes('squatterSigns', ['Evidence of cooking', 'Human excrement', 'Hypodermic needles', 'Neighbor reports', 'Noise', 'Squatters are present on site', 'Personal belongings']), 'squatterSigns')}
+          ${ (Array.isArray(c.squatterSigns) && c.squatterSigns.length > 0) ? followUp('squatterSigns') : '' }
+          ${field('Other squatter activity notes', false, `<input type="text" class="text-input" placeholder="Describe additional signs…" value="${esc(c.squatterOther)}" oninput="App.setField('squatterOther', this.value)">`, 'squatterOther')}
+        </div>`;
+
+      default: return '<div class="section-header"><h2>Section not found</h2></div>';
+    }
+  },
+
+  // ---- ACTION SHEET ----
+  showActionSheet(title, actions) {
+    document.getElementById('actionSheetTitle').textContent = title;
+    document.getElementById('actionSheetButtons').innerHTML =
+      actions.map((a, i) => `<button class="action-sheet-btn ${a.danger ? 'danger' : ''}" data-idx="${i}">${a.label}</button>`).join('') +
+      `<button class="action-sheet-btn action-sheet-cancel" onclick="App.closeActionSheet()">Cancel</button>`;
+
+    actions.forEach((a, i) => {
+      document.querySelector(`[data-idx="${i}"]`).addEventListener('click', () => {
+        this.closeActionSheet();
+        a.action();
+      });
+    });
+
+    document.getElementById('actionOverlay').classList.add('show');
+  },
+
+  closeActionSheet() {
+    document.getElementById('actionOverlay').classList.remove('show');
+  },
+
+  // ---- CONFIRM MODAL ----
+  showConfirm(title, body, onConfirm) {
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalBody').textContent = body;
+    this._modalCallback = onConfirm;
+    document.getElementById('modalConfirmBtn').onclick = () => {
+      const cb = this._modalCallback;
+      this.closeModal();
+      if (cb) cb();
+    };
+    document.getElementById('modalOverlay').classList.add('show');
+  },
+
+  closeModal() {
+    document.getElementById('modalOverlay').classList.remove('show');
+    this._modalCallback = null;
+  },
+
+  // ---- TOAST ----
+  showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  },
+
+  // ---- REPORT BUILDER ----
+  buildReportHTML(insp) {
+    const arr = v => Array.isArray(v) ? v.join(', ') : (v || '—');
+    const val = v => v || '—';
+    const row = (label, value) => value && value !== '—'
+      ? `<tr><td style="font-weight:600;padding:5px 12px;color:#555;white-space:nowrap;min-width:180px">${label}</td><td style="padding:5px 12px">${value}</td></tr>`
+      : '';
+    const section = (title, rows) => `<h2 style="color:#1a4fa0;font-size:14px;margin:20px 0 6px;border-bottom:2px solid #eff6ff;padding-bottom:4px">${title}</h2><table style="width:100%;border-collapse:collapse;margin-bottom:12px;font-size:13px">${rows}</table>`;
+
+    const photos = insp.photos || {};
+    const allPhotoCount = Object.values(photos).flat().length;
+    const ACTION_KEYS = [
+      {key:'structuralDamage',    label:'Structural Damage'},
+      {key:'facadeCondition',     label:'Facade Condition'},
+      {key:'corniceCondition',    label:'Cornice Condition'},
+      {key:'frontDoorCondition',  label:'Front Door Condition'},
+      {key:'doorSurroundCondition',label:'Door Surround Condition'},
+      {key:'rearWallCondition',   label:'Rear Wall Condition'},
+      {key:'lpWallCondition',     label:'L/P-Wall Condition'},
+      {key:'rearDoorCondition',   label:'Rear Door Condition'},
+      {key:'roofCondition',       label:'Roof Condition'},
+      {key:'squatterSigns',       label:'Squatter Activity'}
+    ];
+    const manualActionItems = ACTION_KEYS
+      .filter(({key}) => insp[key+'NextSteps'])
+      .map(({key, label}) => ({label, nextSteps: insp[key+'NextSteps'], urgency: insp[key+'Urgency'] || ''}));
+
+    // Auto-generated action items from field values
+    const autoActionItems = [];
+    if (['B - Minimal','C - Moderate','D - Significant'].includes(insp.historicalFabric))
+      autoActionItems.push({label:'Historical Fabric', nextSteps:'Schedule CHAP stabilization', urgency:''});
+    if (insp.frontPadlock === 'No')
+      autoActionItems.push({label:'Front Door Security', nextSteps:'Add padlock to front door', urgency:'Urgent'});
+    if (insp.rearPadlock === 'No')
+      autoActionItems.push({label:'Rear Door Security', nextSteps:'Add padlock to rear door', urgency:'Urgent'});
+    const unsecuredWin = [];
+    if (insp.frontWindowsCondition === 'Unsecured') unsecuredWin.push('front');
+    if (insp.rearWindowCondition === 'Unsecured') unsecuredWin.push('rear');
+    if (unsecuredWin.length)
+      autoActionItems.push({label:'Windows', nextSteps:`Secure ${unsecuredWin.join(' and ')} windows`, urgency:'Urgent'});
+    if (insp.sewerLineLocation === 'Not present/unknown')
+      autoActionItems.push({label:'Sewer Line', nextSteps:'Apply for vault install w/ DPW', urgency:''});
+    if (insp.waterLineCitySide === 'Galvanized')
+      autoActionItems.push({label:'Water Lines — City Side', nextSteps:'Apply to the city to replace galvanized line with copper', urgency:''});
+    if (insp.waterLineHouseSide === 'Galvanized')
+      autoActionItems.push({label:'Water Lines — House Side', nextSteps:'Request a quote from a plumbing contractor to replace lines with copper', urgency:''});
+    if (insp.waterMeterPresent === 'No')
+      autoActionItems.push({label:'Water Meter', nextSteps:'Apply for water meter install w/ DPW', urgency:''});
+    if (insp.hazardsPresent === 'Yes' && insp.hazardsToPedestrians)
+      autoActionItems.push({label:'Hazards to Pedestrians', nextSteps:insp.hazardsToPedestrians, urgency:'Urgent'});
+    if (Array.isArray(insp.squatterSigns) && insp.squatterSigns.length > 0)
+      autoActionItems.push({label:'Squatter Activity', nextSteps:'Initiate eviction procedures', urgency:'Urgent'});
+
+    const allItems = [...autoActionItems, ...manualActionItems]
+      .sort((a, b) => (a.urgency === 'Urgent' ? 0 : 1) - (b.urgency === 'Urgent' ? 0 : 1));
+    const actionItems = allItems;
+
+    const nextStepsRow = (key, label) => {
+      const ns = insp[key+'NextSteps'];
+      const urg = insp[key+'Urgency'];
+      if (!ns && !urg) return '';
+      return (ns ? row(label + ' — Next Steps', val(ns)) : '') +
+             (urg ? row(label + ' — Urgency', `<span style="font-weight:700;color:${urg==='Urgent'?'#c0392b':'#1a4fa0'}">${urg}</span>`) : '');
+    };
+    const photoLabels = {
+      property:'Property Information',structuralDamage:'Structural Damage',historicalFabric:'Historical Fabric',notes:'Notes',
+      facadeCondition:'Facade Condition',facadeMaterial:'Facade Material',corniceCondition:'Cornice Condition',corniceMaterial:'Cornice Material',
+      frontDoorCondition:'Front Door Condition',frontDoorMaterial:'Front Door Material',doorSurroundCondition:'Door Surround Condition',
+      doorSurroundMaterial:'Door Surround Material',frontPadlock:'Front Padlock',englishBasement:'English Basement',
+      engBasementDoorMaterial:'Eng. Basement Door Material',rearWallCondition:'Rear Wall Condition',rearWallConfig:'Rear Wall Configuration',
+      lpWallCondition:'L/P-Wall Condition',lpWallMaterial:'L/P-Wall Material',rearDoorCondition:'Rear Door Condition',
+      rearDoorMaterial:'Rear Door Material',rearPadlock:'Rear Padlock',rearWindowCondition:'Rear Window Condition',
+      rearWindows1stFloor:'Rear Windows 1st Floor',frontWindowsCondition:'Front Windows Condition',
+      frontWindows1stFloor:'Front Windows 1st Floor',roofCondition:'Roof Condition',roofStyle:'Roof Style',
+      gasLineLocation:'Gas Line Location',waterLineLocation:'Water Line Location',sewerLineLocation:'Sewer Line Location',
+      electricalLineLocation:'Electrical Line Location',electricalLineElevation:'Electrical Line Elevation',waterLineCitySide:'Water Lines — City Side',waterLineHouseSide:'Water Lines — House Side',
+      backYardCondition:'Back Yard Condition',waterMeterPresent:'Water Meter Present',hazardsPresent:'Hazards to Pedestrians',hazardsToPedestrians:'Hazard Description',
+      squatterSigns:'Squatter Signs',squatterOther:'Other Squatter Notes'
+    };
+    const photoBlock = keys => {
+      const blocks = keys.filter(k => (photos[k]||[]).length).map(k => {
+        const imgs = photos[k];
+        const label = photoLabels[k] || k;
+        return `<div style="margin-bottom:10px"><div style="font-weight:600;font-size:12px;color:#555;margin-bottom:5px">${label} <span style="font-weight:400;color:#999">(${imgs.length} photo${imgs.length>1?'s':''})</span></div><div class="photo-grid">${imgs.map((src,i)=>`<img src="${src}" alt="${label} ${i+1}">`).join('')}</div></div>`;
+      });
+      return blocks.length ? `<div style="background:#fafafa;border:1px solid #e8f0eb;border-radius:6px;padding:12px 14px;margin:-4px 0 16px">${blocks.join('')}</div>` : '';
+    };
+    const corniceMatDisplay = insp.corniceMaterial === '__other__' ? ('Other: ' + (insp.corniceOther || '')) : val(insp.corniceMaterial);
+    const date = insp.inspectionDate ? new Date(insp.inspectionDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '—';
+
+    const pdfFilename = 'CHAP-Report-' + (insp.address || 'Inspection').replace(/[^a-zA-Z0-9]/g, '-') + (insp.inspectionDate ? '-' + insp.inspectionDate : '') + '.pdf';
+    return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<title>CHAP Report — ${insp.address || 'Inspection'}</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;max-width:800px;margin:0 auto;padding:24px;color:#222;line-height:1.5}
+  .report-header{margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #1a4fa0}
+  .report-header .org{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#1a4fa0;font-weight:600;margin-bottom:5px}
+  .report-header h1{font-size:26px;font-weight:800;color:#111;margin:0;letter-spacing:-0.3px}
+  .meta{font-size:13px;color:#666;margin-bottom:20px}
+  .badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600}
+  .badge-sub{background:#eff6ff;color:#1a4fa0}.badge-draft{background:#fff8e6;color:#b87200}
+  .photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0}
+  .photo-grid img{width:100%;border-radius:6px;border:1px solid #ddd;aspect-ratio:1;object-fit:cover}
+  table tr{border-bottom:1px solid #f0f0f0}
+  @media print{.no-print{display:none!important}}
+</style></head>
+<body>
+<div class="no-print" style="margin-bottom:20px;display:flex;gap:10px;align-items:center">
+  <button onclick="window.print()" style="padding:8px 18px;background:#1a4fa0;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px">🖨️ Print Report</button>
+  <button id="pdfBtn" onclick="downloadPDF()" style="padding:8px 18px;background:#1a4fa0;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px">📄 Download PDF</button>
+  <span id="pdfStatus" style="font-size:13px;color:#888;display:none">Generating PDF…</span>
+</div>
+<script>
+function downloadPDF() {
+  const btn = document.getElementById('pdfBtn');
+  const status = document.getElementById('pdfStatus');
+  const toolbar = document.querySelector('.no-print');
+  btn.disabled = true;
+  status.style.display = 'inline';
+  toolbar.style.display = 'none';
+  html2pdf().set({
+    margin: [12, 12, 12, 12],
+    filename: '${pdfFilename}',
+    image: { type: 'jpeg', quality: 0.95 },
+    html2canvas: { scale: 2, useCORS: true, logging: false },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+  }).from(document.body).save().then(() => {
+    toolbar.style.display = 'flex';
+    btn.disabled = false;
+    status.style.display = 'none';
+  });
+}
+<\/script>
+<div class="report-header">
+  <div class="org">Parity Homes</div>
+  <h1>Property Onboarding Report</h1>
+</div>
+<div class="meta">
+  <strong>${insp.address || 'Address not recorded'}</strong> &bull; ${insp.neighborhood || '—'}<br>
+  Inspector: ${insp.inspectorName || '—'} &bull; Date: ${date}<br>
+  Status: <span class="badge ${insp.submittedAt ? 'badge-sub' : 'badge-draft'}">${insp.submittedAt ? 'Submitted' : 'Draft'}</span>
+  ${insp.submittedAt ? '&bull; Submitted: ' + new Date(insp.submittedAt).toLocaleString() : ''}
+</div>
+
+${photoBlock(['property'])}
+
+${section('Structure & Overview',
+  row('Structural Damage', val(insp.structuralDamage)) +
+  nextStepsRow('structuralDamage', 'Structural Damage') +
+  row('Historical Fabric', val(insp.historicalFabric)) +
+  row('Notes', val(insp.notes))
+)}
+${photoBlock(['structuralDamage','historicalFabric','notes'])}
+
+${section('Facade & Cornice',
+  row('Facade Condition', val(insp.facadeCondition)) +
+  nextStepsRow('facadeCondition', 'Facade Condition') +
+  row('Facade Material', val(insp.facadeMaterial)) +
+  row('Cornice Condition', val(insp.corniceCondition)) +
+  nextStepsRow('corniceCondition', 'Cornice Condition') +
+  row('Cornice Material', corniceMatDisplay)
+)}
+${photoBlock(['facadeCondition','facadeMaterial','corniceCondition','corniceMaterial'])}
+
+${section('Front Entrance',
+  row('Front Door Condition', val(insp.frontDoorCondition)) +
+  nextStepsRow('frontDoorCondition', 'Front Door Condition') +
+  row('Front Door Material', val(insp.frontDoorMaterial)) +
+  row('Door Surround Condition', val(insp.doorSurroundCondition)) +
+  nextStepsRow('doorSurroundCondition', 'Door Surround Condition') +
+  row('Door Surround Material', val(insp.doorSurroundMaterial)) +
+  row('Front Padlock', val(insp.frontPadlock)) +
+  row('English Basement', val(insp.englishBasement)) +
+  row('Eng. Basement Door Material', val(insp.engBasementDoorMaterial))
+)}
+${photoBlock(['frontDoorCondition','frontDoorMaterial','doorSurroundCondition','doorSurroundMaterial','frontPadlock','englishBasement','engBasementDoorMaterial'])}
+
+${section('Rear of Property',
+  row('Rear Wall Condition', val(insp.rearWallCondition)) +
+  nextStepsRow('rearWallCondition', 'Rear Wall Condition') +
+  row('Rear Wall Configuration', val(insp.rearWallConfig)) +
+  row('L/P-Wall Condition', val(insp.lpWallCondition)) +
+  nextStepsRow('lpWallCondition', 'L/P-Wall Condition') +
+  row('L/P-Wall Material', arr(insp.lpWallMaterial)) +
+  row('Rear Door Condition', val(insp.rearDoorCondition)) +
+  nextStepsRow('rearDoorCondition', 'Rear Door Condition') +
+  row('Rear Door Material', val(insp.rearDoorMaterial)) +
+  row('Rear Padlock', val(insp.rearPadlock)) +
+  row('Rear Window Condition', val(insp.rearWindowCondition)) +
+  row('Rear Windows 1st Floor', val(insp.rearWindows1stFloor))
+)}
+${photoBlock(['rearWallCondition','rearWallConfig','lpWallCondition','lpWallMaterial','rearDoorCondition','rearDoorMaterial','rearPadlock','rearWindowCondition','rearWindows1stFloor'])}
+
+${section('Front Windows',
+  row('Front Windows Condition', val(insp.frontWindowsCondition)) +
+  row('Front Windows 1st Floor', arr(insp.frontWindows1stFloor))
+)}
+${photoBlock(['frontWindowsCondition','frontWindows1stFloor'])}
+
+${section('Roof & Utilities',
+  row('Roof Condition', val(insp.roofCondition)) +
+  nextStepsRow('roofCondition', 'Roof Condition') +
+  row('Roof Style', val(insp.roofStyle)) +
+  row('Gas Line Location', val(insp.gasLineLocation)) +
+  row('Water Line Location', val(insp.waterLineLocation)) +
+  row('Sewer Line Location', val(insp.sewerLineLocation)) +
+  row('Electrical Line Location', val(insp.electricalLineLocation)) +
+  row('Electrical Line Elevation', val(insp.electricalLineElevation)) +
+  row('Water Lines — City Side', val(insp.waterLineCitySide)) +
+  row('Water Lines — House Side', val(insp.waterLineHouseSide))
+)}
+${photoBlock(['roofCondition','roofStyle','gasLineLocation','waterLineLocation','sewerLineLocation','electricalLineLocation','electricalLineElevation'])}
+
+${section('Site Conditions',
+  row('Back Yard Condition', arr(insp.backYardCondition)) +
+  row('Water Meter Present', val(insp.waterMeterPresent)) +
+  row('Hazards to Pedestrians', val(insp.hazardsPresent) + (insp.hazardsPresent === 'Yes' && insp.hazardsToPedestrians ? ': ' + insp.hazardsToPedestrians : '')) +
+  row('Squatter Signs', arr(insp.squatterSigns)) +
+  nextStepsRow('squatterSigns', 'Squatter Activity') +
+  row('Other Squatter Notes', val(insp.squatterOther))
+)}
+${photoBlock(['backYardCondition','waterMeterPresent','hazardsToPedestrians','squatterSigns','squatterOther'])}
+
+${allPhotoCount ? `<p style="font-size:12px;color:#888;margin-top:4px">${allPhotoCount} photo${allPhotoCount>1?'s':''} total attached to this inspection.</p>` : ''}
+
+${actionItems.length ? `
+<h2 style="color:#1a4fa0;font-size:16px;margin:28px 0 10px;border-bottom:3px solid #1a4fa0;padding-bottom:6px">⚠️ Action Items (${actionItems.length})</h2>
+<table style="width:100%;border-collapse:collapse;font-size:13px">
+  <thead>
+    <tr style="background:#f3f4f6">
+      <th style="padding:8px 10px;text-align:left;font-size:11px;color:#555;font-weight:600;width:22px">#</th>
+      <th style="padding:8px 10px;text-align:left;font-size:11px;color:#555;font-weight:600;min-width:160px">Area</th>
+      <th style="padding:8px 10px;text-align:left;font-size:11px;color:#555;font-weight:600">Recommended Next Steps</th>
+      <th style="padding:8px 10px;text-align:left;font-size:11px;color:#555;font-weight:600;white-space:nowrap">Urgency</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${actionItems.map((item, i) => `
+    <tr style="border-bottom:1px solid #f0f0f0;background:${item.urgency==='Urgent'?'#fef9f9':'white'}">
+      <td style="padding:10px 10px;color:#aaa;font-size:12px;vertical-align:top">${i+1}</td>
+      <td style="padding:10px 10px;font-weight:600;color:#374151;vertical-align:top;white-space:nowrap">${item.label}</td>
+      <td style="padding:10px 10px;color:#222;vertical-align:top;line-height:1.5">${item.nextSteps}</td>
+      <td style="padding:10px 10px;vertical-align:top">
+        ${item.urgency ? `<span style="display:inline-block;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap;background:${item.urgency==='Urgent'?'#fde8e6':'#eff6ff'};color:${item.urgency==='Urgent'?'#c0392b':'#1a4fa0'}">${item.urgency}</span>` : '—'}
+      </td>
+    </tr>`).join('')}
+  </tbody>
+</table>` : ''}
+
+<p style="color:#aaa;font-size:11px;margin-top:30px;border-top:1px solid #eee;padding-top:10px">
+  Generated by Parity Homes Property Inspection App &bull; ${new Date().toLocaleString()}
+</p>
+</body></html>`;
+  }
+
+}; // end App
+
+// Boot
+document.addEventListener('DOMContentLoaded', () => App.init());
+</script>
+</body>
+</html>
