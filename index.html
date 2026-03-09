@@ -1112,7 +1112,14 @@ const App = {
         this.showToast('✅ Inspection submitted!');
         setTimeout(() => this.backToHome(), 1200);
 
-        // Run NocoDB sync and email in parallel
+        // Upload photos to Vercel Blob first, then sync and email
+        const photoUploadResult = await this.uploadPhotosToBlob(this.current);
+        if (photoUploadResult.urls && photoUploadResult.urls.length) {
+          this.current.photoUrls = photoUploadResult.urls;
+          this.saveDraft();
+          setTimeout(() => this.showToast('🖼 Photos uploaded'), 1800);
+        }
+
         const [syncResult, emailResult] = await Promise.all([
           this.syncToNocoDB(this.current),
           this.sendReportEmail(this.current)
@@ -1262,6 +1269,7 @@ const App = {
       'Action Items':               actions.join('\n'),
       'Notes':                      v(insp.notes),
       'App Record ID':              v(insp.id),
+      'Photo URLs':                 (insp.photoUrls || []).join('\n'),
     };
   },
 
@@ -1277,6 +1285,27 @@ const App = {
       return { ok: res.ok, status: res.status };
     } catch(e) {
       return { ok: false, reason: 'network-error', error: e };
+    }
+  },
+
+  async uploadPhotosToBlob(insp) {
+    try {
+      const allPhotos = [];
+      Object.entries(insp.photos || {}).forEach(([key, imgs]) => {
+        imgs.forEach((data, i) => {
+          allPhotos.push({ data, filename: `${key}-${i + 1}` });
+        });
+      });
+      if (!allPhotos.length) return { urls: [] };
+      const res = await fetch('/api/upload-photos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photos: allPhotos, inspectionId: insp.id })
+      });
+      if (!res.ok) return { urls: [], ok: false };
+      return await res.json();
+    } catch(e) {
+      return { urls: [], ok: false, error: e };
     }
   },
 
