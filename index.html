@@ -674,7 +674,10 @@ body {
           <div style="font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; opacity: 0.7; font-weight: 500;">Parity Homes</div>
           <h1 style="font-size: 24px; font-weight: 800; letter-spacing: -0.3px;">Property Onboarding</h1>
         </div>
-        <button class="btn-gear" onclick="App.openSettings()" title="Database Settings">⚙️</button>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="btn-gear" id="refreshBtn" onclick="App.refreshFromCloud()" title="Refresh from cloud" style="font-size:18px;">🔄</button>
+          <button class="btn-gear" onclick="App.openSettings()" title="Database Settings">⚙️</button>
+        </div>
       </div>
       <button class="btn btn-primary" onclick="App.newInspection()" style="width: 100%; font-size: 16px; padding: 14px; background: white; color: var(--green);">
         + New Property Inspection
@@ -702,6 +705,7 @@ body {
         <div>
           <h1>Property Onboarding</h1>
           <p id="formSubtitle">New Inspection</p>
+          <p id="syncBadge" style="font-size:11px;color:#888;margin:0;opacity:0;transition:opacity 0.3s;"></p>
         </div>
         <div style="display: flex; gap: 6px; align-items: center;">
           <button class="btn btn-ghost btn-sm" onclick="App.showFormOptions()">⋯</button>
@@ -840,6 +844,7 @@ const App = {
     } catch(e) { this.inspections = []; }
 
     this.renderHome();
+    this.loadFromCloud(); // pull latest from cloud in background
 
     // Photo input handler (library fallback)
     document.getElementById('photoInput').addEventListener('change', e => {
@@ -885,6 +890,84 @@ const App = {
     if (idx >= 0) this.inspections[idx] = this.current;
     else this.inspections.unshift(this.current);
     this.save();
+    this.cloudSync(); // debounced — syncs to Vercel Blob for team sharing
+  },
+
+  // ---- CLOUD SYNC ----
+  _syncTimer: null,
+  _syncStatus: 'idle', // 'idle' | 'syncing' | 'synced' | 'error'
+
+  cloudSync() {
+    clearTimeout(this._syncTimer);
+    this._syncTimer = setTimeout(() => this._doCloudSync(), 2000);
+  },
+
+  async _doCloudSync() {
+    if (!this.current) return;
+    this._syncStatus = 'syncing';
+    this._updateSyncBadge();
+    try {
+      const res = await fetch('/api/save-inspection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inspection: this.current }),
+      });
+      this._syncStatus = res.ok ? 'synced' : 'error';
+    } catch {
+      this._syncStatus = 'error';
+    }
+    this._updateSyncBadge();
+  },
+
+  _updateSyncBadge() {
+    const el = document.getElementById('syncBadge');
+    if (!el) return;
+    const map = { idle: '', syncing: '☁️ Syncing…', synced: '✓ Synced', error: '⚠️ Sync failed' };
+    el.textContent = map[this._syncStatus] || '';
+    el.style.opacity = this._syncStatus === 'idle' ? '0' : '1';
+  },
+
+  async loadFromCloud() {
+    try {
+      const res = await fetch('/api/list-inspections');
+      if (!res.ok) return;
+      const { inspections: remote } = await res.json();
+      if (!Array.isArray(remote) || !remote.length) return;
+
+      let changed = false;
+      remote.forEach(r => {
+        const localIdx = this.inspections.findIndex(l => l.id === r.id);
+        if (localIdx < 0) {
+          // New inspection from another device — add it
+          this.inspections.push(r);
+          changed = true;
+        } else {
+          const local = this.inspections[localIdx];
+          const remoteNewer = new Date(r.updatedAt || 0) > new Date(local.updatedAt || 0);
+          if (remoteNewer) {
+            // Remote is newer — merge, but preserve any local base64 photos not yet uploaded
+            const mergedPhotos = { ...(r.photos || {}) };
+            Object.entries(local.photos || {}).forEach(([key, arr]) => {
+              const localBase64 = (arr || []).filter(src => src && src.startsWith('data:image/'));
+              if (localBase64.length) {
+                mergedPhotos[key] = [...(mergedPhotos[key] || []), ...localBase64];
+              }
+            });
+            this.inspections[localIdx] = { ...r, photos: mergedPhotos };
+            changed = true;
+          }
+        }
+      });
+
+      if (changed) {
+        // Sort by most recently updated
+        this.inspections.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+        this.save();
+        this.renderHome();
+      }
+    } catch {
+      // Fail silently — offline or API not yet deployed
+    }
   },
 
   // ---- NAVIGATION ----
@@ -1048,7 +1131,7 @@ const App = {
     if (!this.current || !this.photoTarget) return;
     // Resize to max 1200px wide before storing — keeps file size small and prevents PDF blowup
     const img = new Image();
-    img.onload = () => {
+    img.onload = async () => {
       const maxW = 1200, maxH = 900;
       let w = img.width, h = img.height;
       if (w > maxW || h > maxH) {
@@ -1060,13 +1143,43 @@ const App = {
       canvas.width = w; canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
       const resized = canvas.toDataURL('image/jpeg', 0.82);
-      if (!this.current.photos[this.photoTarget]) this.current.photos[this.photoTarget] = [];
-      this.current.photos[this.photoTarget].push(resized);
+
+      const target = this.photoTarget;
+      if (!this.current.photos[target]) this.current.photos[target] = [];
+      const idx = this.current.photos[target].length;
+      // Store base64 immediately so the photo shows up right away
+      this.current.photos[target].push(resized);
       this.saveDraft();
       this.renderFormSection();
       this.showToast('📷 Photo added');
+
+      // Upload to Blob in background so teammates can see it
+      const url = await this.uploadSinglePhoto(resized, target, idx);
+      if (url && this.current && this.current.photos[target]) {
+        this.current.photos[target][idx] = url; // replace base64 with public URL
+        this.saveDraft();
+      }
     };
     img.src = dataUrl;
+  },
+
+  async uploadSinglePhoto(base64, sectionId, idx) {
+    if (!this.current) return null;
+    try {
+      const res = await fetch('/api/upload-photos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          photos: [{ data: base64, filename: `${sectionId}-${idx + 1}` }],
+          inspectionId: this.current.id,
+        }),
+      });
+      if (!res.ok) return null;
+      const { urls } = await res.json();
+      return urls?.[0] || null;
+    } catch {
+      return null; // Keep base64 as fallback when offline
+    }
   },
 
   removePhoto(sectionId, idx) {
@@ -1154,7 +1267,7 @@ const App = {
     const addr = insp ? (insp.address || 'this inspection') : 'this inspection';
     this.showConfirm(
       'Delete Inspection',
-      `Permanently delete the inspection for "${addr}"? This cannot be undone.`,
+      `Permanently delete the inspection for "${addr}"? This will remove it for everyone.`,
       () => {
         this.inspections = this.inspections.filter(i => i.id !== id);
         this.save();
@@ -1164,6 +1277,12 @@ const App = {
         }
         this.renderHome();
         this.showToast('🗑️ Inspection deleted');
+        // Remove from cloud so it disappears for all team members
+        fetch('/api/delete-inspection', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id }),
+        }).catch(() => {}); // fail silently
       }
     );
   },
@@ -1421,6 +1540,14 @@ const App = {
   },
 
   // ---- HOME RENDER ----
+  refreshFromCloud() {
+    const btn = document.getElementById('refreshBtn');
+    if (btn) { btn.style.opacity = '0.3'; btn.style.transform = 'rotate(180deg)'; btn.style.transition = 'all 0.4s'; }
+    this.loadFromCloud().then(() => {
+      if (btn) { btn.style.opacity = '1'; btn.style.transform = 'rotate(0deg)'; }
+    });
+  },
+
   renderHome() {
     const total = this.inspections.length;
     const submitted = this.inspections.filter(i => i.submittedAt).length;
@@ -1434,7 +1561,7 @@ const App = {
       list.innerHTML = `<div class="empty-state">
         <div class="empty-icon">🏚️</div>
         <h3>No inspections yet</h3>
-        <p>Tap "New Property Inspection" above to start your first property onboarding..</p>
+        <p>Tap "New Property Inspection" above to start your first property onboarding.</p>
       </div>`;
       return;
     }
