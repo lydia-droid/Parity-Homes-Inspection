@@ -263,6 +263,75 @@ body {
 .photo-count { font-size: 11px; color: var(--gray-500); margin-top: 6px; text-align: center; }
 .photo-empty { text-align: center; padding: 8px 0; color: var(--gray-400); font-size: 12px; }
 
+/* CAMERA MODAL */
+.camera-overlay {
+  position: fixed; inset: 0; background: #000;
+  z-index: 2000; display: none;
+  flex-direction: column; align-items: center; justify-content: flex-start;
+}
+.camera-overlay.open { display: flex; }
+.camera-topbar {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; position: absolute; top: 0; left: 0; z-index: 10;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
+}
+.camera-title { color: white; font-size: 15px; font-weight: 600; letter-spacing: 0.2px; }
+.camera-close-btn {
+  background: rgba(255,255,255,0.15); border: none; color: white;
+  width: 36px; height: 36px; border-radius: 50%; font-size: 20px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.camera-video {
+  width: 100%; height: 100%; object-fit: cover; background: #000;
+}
+.camera-bottom {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 20px 32px 36px;
+  background: linear-gradient(to top, rgba(0,0,0,0.75), transparent);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.camera-shutter {
+  width: 70px; height: 70px; border-radius: 50%;
+  background: white; border: 4px solid rgba(255,255,255,0.5);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.25);
+  cursor: pointer; flex-shrink: 0;
+  transition: transform 0.1s, background 0.1s;
+  display: flex; align-items: center; justify-content: center; font-size: 26px;
+}
+.camera-shutter:active { transform: scale(0.92); background: #e0e0e0; }
+.camera-flip-btn {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: rgba(255,255,255,0.18); border: none; color: white;
+  font-size: 22px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.camera-library-btn {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: rgba(255,255,255,0.18); border: none; color: white;
+  font-size: 20px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.camera-no-support {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; color: white; gap: 16px;
+  padding: 32px; text-align: center;
+}
+.camera-no-support p { font-size: 15px; opacity: 0.8; line-height: 1.5; }
+.camera-no-support button {
+  padding: 12px 24px; background: var(--green); color: white;
+  border: none; border-radius: 10px; font-size: 15px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+}
+.camera-flash {
+  position: absolute; inset: 0; background: white;
+  opacity: 0; pointer-events: none; z-index: 20;
+  transition: opacity 0.05s;
+}
+.camera-flash.flash { opacity: 1; }
+
 /* PER-FIELD PHOTO WIDGET */
 .field-photo-widget { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--gray-200); }
 .field-photo-row { display: flex; align-items: center; gap: 8px; }
@@ -510,7 +579,7 @@ body {
   <div class="toast" id="toast"></div>
 
   <!-- Hidden photo input -->
-  <input type="file" class="photo-input" id="photoInput" accept="image/*" capture="environment" multiple>
+  <input type="file" class="photo-input" id="photoInput" accept="image/*" multiple>
 
   <!-- Action Sheet -->
   <div class="action-overlay" id="actionOverlay">
@@ -557,6 +626,25 @@ body {
         Address · Neighborhood · Inspector · Inspection Date · Submitted At · Structural Damage · Historical Fabric · Facade Condition · Front Door Condition · Front Padlock · Front Windows · Rear Door Condition · Rear Padlock · Rear Window Condition · Roof Condition · Electrical Line Location · Electrical Line Elevation · Sewer Line Location · Water Line - City Side · Water Line - House Side · Water Meter Present · Back Yard Condition · Hazards to Pedestrians · Hazard Description · Squatter Signs · Squatter Notes · Action Items · Notes · App Record ID
         <br><br>All columns should be <strong>Single line text</strong> type, except <em>Back Yard Condition</em>, <em>Squatter Signs</em>, <em>Action Items</em>, <em>Hazard Description</em>, and <em>Notes</em> which should be <strong>Long text</strong>.
       </div>
+    </div>
+  </div>
+
+  <!-- Camera Modal -->
+  <div class="camera-overlay" id="cameraOverlay">
+    <video class="camera-video" id="cameraVideo" autoplay playsinline muted></video>
+    <div class="camera-flash" id="cameraFlash"></div>
+    <div class="camera-topbar">
+      <span class="camera-title" id="cameraTitle">Take Photo</span>
+      <button class="camera-close-btn" onclick="App.closeCamera()">✕</button>
+    </div>
+    <div class="camera-bottom">
+      <button class="camera-library-btn" title="Choose from library" onclick="App.openLibrary()">🖼</button>
+      <button class="camera-shutter" id="cameraShutter" onclick="App.capturePhoto()" title="Take photo">📷</button>
+      <button class="camera-flip-btn" id="cameraFlipBtn" onclick="App.flipCamera()" title="Flip camera">🔄</button>
+    </div>
+    <div class="camera-no-support" id="cameraNoSupport" style="display:none">
+      <p>Camera not available. This works on HTTPS — make sure you're using the live Vercel deployment, not a local file.</p>
+      <button onclick="App.openLibrary()">📁 Choose from Library</button>
     </div>
   </div>
 
@@ -744,22 +832,18 @@ const App = {
 
     this.renderHome();
 
-    // Photo input handler
+    // Photo input handler (library fallback)
     document.getElementById('photoInput').addEventListener('change', e => {
       const files = Array.from(e.target.files);
+      if (!files.length) return;
       let loaded = 0;
       files.forEach(file => {
         const reader = new FileReader();
         reader.onload = ev => {
-          if (this.photoTarget && this.current) {
-            if (!this.current.photos[this.photoTarget]) this.current.photos[this.photoTarget] = [];
-            this.current.photos[this.photoTarget].push(ev.target.result);
-            loaded++;
-            if (loaded === files.length) {
-              this.saveDraft();
-              this.renderFormSection();
-              this.showToast(`📷 ${files.length} photo${files.length > 1 ? 's' : ''} added`);
-            }
+          this._savePhoto(ev.target.result);
+          loaded++;
+          if (loaded === files.length && files.length > 1) {
+            this.showToast(`📷 ${files.length} photos added`);
           }
         };
         reader.readAsDataURL(file);
@@ -855,7 +939,109 @@ const App = {
   // ---- PHOTOS ----
   addPhoto(sectionId) {
     this.photoTarget = sectionId;
+    // Try in-app camera first; fall back to file picker on unsupported environments
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      this.openCamera();
+    } else {
+      document.getElementById('photoInput').click();
+    }
+  },
+
+  // ---- CAMERA ----
+  _cameraStream: null,
+  _cameraFacing: 'environment', // 'environment' = rear, 'user' = front
+
+  async openCamera() {
+    const overlay = document.getElementById('cameraOverlay');
+    const video = document.getElementById('cameraVideo');
+    const noSupport = document.getElementById('cameraNoSupport');
+    const shutter = document.getElementById('cameraShutter');
+    const flipBtn = document.getElementById('cameraFlipBtn');
+    overlay.classList.add('open');
+    noSupport.style.display = 'none';
+    video.style.display = 'block';
+    shutter.style.display = 'flex';
+    flipBtn.style.display = 'flex';
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: this._cameraFacing, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: false
+      });
+      this._cameraStream = stream;
+      video.srcObject = stream;
+    } catch (err) {
+      // Permission denied or no camera
+      video.style.display = 'none';
+      shutter.style.display = 'none';
+      flipBtn.style.display = 'none';
+      noSupport.style.display = 'flex';
+    }
+  },
+
+  closeCamera() {
+    if (this._cameraStream) {
+      this._cameraStream.getTracks().forEach(t => t.stop());
+      this._cameraStream = null;
+    }
+    const video = document.getElementById('cameraVideo');
+    video.srcObject = null;
+    document.getElementById('cameraOverlay').classList.remove('open');
+  },
+
+  async flipCamera() {
+    this._cameraFacing = this._cameraFacing === 'environment' ? 'user' : 'environment';
+    if (this._cameraStream) {
+      this._cameraStream.getTracks().forEach(t => t.stop());
+      this._cameraStream = null;
+    }
+    const video = document.getElementById('cameraVideo');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: this._cameraFacing, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: false
+      });
+      this._cameraStream = stream;
+      video.srcObject = stream;
+    } catch (err) {
+      this.showToast('⚠️ Could not switch camera');
+    }
+  },
+
+  capturePhoto() {
+    const video = document.getElementById('cameraVideo');
+    if (!video.videoWidth) return;
+    // Flash effect
+    const flash = document.getElementById('cameraFlash');
+    flash.classList.add('flash');
+    setTimeout(() => flash.classList.remove('flash'), 150);
+    // Draw frame to canvas → base64
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    // Mirror front camera so text reads correctly
+    if (this._cameraFacing === 'user') {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.drawImage(video, 0, 0);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+    this._savePhoto(dataUrl);
+    this.closeCamera();
+  },
+
+  openLibrary() {
+    this.closeCamera();
     document.getElementById('photoInput').click();
+  },
+
+  _savePhoto(dataUrl) {
+    if (!this.current || !this.photoTarget) return;
+    if (!this.current.photos[this.photoTarget]) this.current.photos[this.photoTarget] = [];
+    this.current.photos[this.photoTarget].push(dataUrl);
+    this.saveDraft();
+    this.renderFormSection();
+    this.showToast('📷 Photo added');
   },
 
   removePhoto(sectionId, idx) {
