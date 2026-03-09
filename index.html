@@ -1852,7 +1852,7 @@ const App = {
         const label = photoLabels[k] || k;
         return `<div style="margin-bottom:10px"><div style="font-weight:600;font-size:12px;color:#555;margin-bottom:5px">${label} <span style="font-weight:400;color:#999">(${imgs.length} photo${imgs.length>1?'s':''})</span></div><div class="photo-grid">${imgs.map((src,i)=>`<img src="${src}" alt="${label} ${i+1}">`).join('')}</div></div>`;
       });
-      return blocks.length ? `<div style="background:#fafafa;border:1px solid #e8f0eb;border-radius:6px;padding:12px 14px;margin:-4px 0 16px">${blocks.join('')}</div>` : '';
+      return blocks.length ? `<div class="photo-section" style="background:#fafafa;border:1px solid #e8f0eb;border-radius:6px;padding:12px 14px;margin:-4px 0 16px">${blocks.join('')}</div>` : '';
     };
     const corniceMatDisplay = insp.corniceMaterial === '__other__' ? ('Other: ' + (insp.corniceOther || '')) : val(insp.corniceMaterial);
     const date = insp.inspectionDate ? new Date(insp.inspectionDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '—';
@@ -1869,9 +1869,9 @@ const App = {
   .meta{font-size:13px;color:#666;margin-bottom:20px}
   .badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600}
   .badge-sub{background:#eff6ff;color:#1a4fa0}.badge-draft{background:#fff8e6;color:#b87200}
-  .photo-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:10px 0}
-  .photo-grid img{width:100%;height:auto;max-height:280px;object-fit:contain;border-radius:6px;border:1px solid #ddd;background:#f5f5f5;display:block;break-inside:avoid}
-  .photo-grid > *{break-inside:avoid}
+  .photo-grid{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+  .photo-grid img{width:calc(25% - 6px);height:150px;object-fit:contain;border-radius:6px;border:1px solid #ddd;background:#f5f5f5;display:block;box-sizing:border-box}
+  .photo-section{break-inside:avoid;page-break-inside:avoid}
   table tr{border-bottom:1px solid #f0f0f0}
   @media print{.no-print{display:none!important}}
 </style></head>
