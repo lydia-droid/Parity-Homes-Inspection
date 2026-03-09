@@ -1,17 +1,15 @@
 import { put } from '@vercel/blob';
 
-export const config = { runtime: 'edge' };
-
-export default async function handler(req) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { photos, inspectionId } = await req.json();
+    const { photos, inspectionId } = req.body;
 
     if (!photos || !Array.isArray(photos)) {
-      return new Response(JSON.stringify({ error: 'No photos provided' }), { status: 400 });
+      return res.status(400).json({ error: 'No photos provided' });
     }
 
     const urls = await Promise.all(photos.map(async ({ data, filename }) => {
@@ -30,13 +28,10 @@ export default async function handler(req) {
       return blob.url;
     }));
 
-    return new Response(JSON.stringify({ urls }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(200).json({ urls });
 
   } catch (err) {
     console.error('Photo upload error:', err);
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+    return res.status(500).json({ error: err.message });
   }
 }
