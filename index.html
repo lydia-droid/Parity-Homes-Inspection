@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Parity Homes — CHAP Property Inspection</title>
+<title>Parity Homes — Property Onboarding</title>
 <style>
 :root {
   --green: #1a4fa0;
@@ -694,7 +694,7 @@ body {
     <div class="header">
       <div class="header-top">
         <div>
-          <h1>CHAP Onboarding</h1>
+          <h1>Property Onboarding</h1>
           <p id="formSubtitle">New Inspection</p>
         </div>
         <div style="display: flex; gap: 6px; align-items: center;">
@@ -1203,7 +1203,7 @@ const App = {
     // Build action items summary (mirrors the report logic)
     const actions = [];
     if (['B - Minimal','C - Moderate','D - Significant'].includes(insp.historicalFabric))
-      actions.push('Schedule CHAP stabilization');
+      actions.push('Schedule stabilization');
     if (insp.frontPadlock === 'No') actions.push('Add padlock — front door [Urgent]');
     if (insp.rearPadlock === 'No') actions.push('Add padlock — rear door [Urgent]');
     const unsecWin = [];
@@ -1322,7 +1322,7 @@ const App = {
     // waiting on CDN loads that would delay the iframe onload event
     let html = this.buildReportHTML(insp).replace(/<script\b[\s\S]*?<\/script>/gi, '');
 
-    const filename = 'CHAP-Report-' + (insp.address || 'Inspection').replace(/[^a-zA-Z0-9]/g, '-') + (insp.inspectionDate ? '-' + insp.inspectionDate : '') + '.pdf';
+    const filename = 'Parity-Report-' + (insp.address || 'Inspection').replace(/[^a-zA-Z0-9]/g, '-') + (insp.inspectionDate ? '-' + insp.inspectionDate : '') + '.pdf';
 
     // Render into a hidden iframe so the full document styles are preserved.
     // An off-screen div causes html2canvas to produce a blank image.
@@ -1377,7 +1377,7 @@ const App = {
       list.innerHTML = `<div class="empty-state">
         <div class="empty-icon">🏚️</div>
         <h3>No inspections yet</h3>
-        <p>Tap "New Property Inspection" above to start your first CHAP onboarding analysis.</p>
+        <p>Tap "New Property Inspection" above to start your first property onboarding..</p>
       </div>`;
       return;
     }
@@ -1797,7 +1797,7 @@ const App = {
     // Auto-generated action items from field values
     const autoActionItems = [];
     if (['B - Minimal','C - Moderate','D - Significant'].includes(insp.historicalFabric))
-      autoActionItems.push({label:'Historical Fabric', nextSteps:'Schedule CHAP stabilization', urgency:''});
+      autoActionItems.push({label:'Historical Fabric', nextSteps:'Schedule stabilization', urgency:''});
     if (insp.frontPadlock === 'No')
       autoActionItems.push({label:'Front Door Security', nextSteps:'Add padlock to front door', urgency:'Urgent'});
     if (insp.rearPadlock === 'No')
@@ -1857,9 +1857,9 @@ const App = {
     const corniceMatDisplay = insp.corniceMaterial === '__other__' ? ('Other: ' + (insp.corniceOther || '')) : val(insp.corniceMaterial);
     const date = insp.inspectionDate ? new Date(insp.inspectionDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '—';
 
-    const pdfFilename = 'CHAP-Report-' + (insp.address || 'Inspection').replace(/[^a-zA-Z0-9]/g, '-') + (insp.inspectionDate ? '-' + insp.inspectionDate : '') + '.pdf';
+    const pdfFilename = 'Parity-Report-' + (insp.address || 'Inspection').replace(/[^a-zA-Z0-9]/g, '-') + (insp.inspectionDate ? '-' + insp.inspectionDate : '') + '.pdf';
     return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
-<title>CHAP Report — ${insp.address || 'Inspection'}</title>
+<title>Property Onboarding Report — ${insp.address || 'Inspection'}</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
 <style>
   body{font-family:Arial,Helvetica,sans-serif;max-width:800px;margin:0 auto;padding:24px;color:#222;line-height:1.5}
