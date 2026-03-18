@@ -1454,7 +1454,7 @@ const App = {
 
     try {
       // Get existing columns
-      const colRes = await fetch(`${url}/api/v2/meta/tables/${tableId}/columns`, {
+      const colRes = await fetch(`${url}/api/v1/db/meta/tables/${tableId}/columns`, {
         headers: { 'xc-token': token }
       });
       if (!colRes.ok) {
@@ -1475,7 +1475,7 @@ const App = {
       statusEl.textContent = `Creating ${missing.length} missing columns…`;
       let created = 0, failed = 0;
       for (const col of missing) {
-        const r = await fetch(`${url}/api/v2/meta/tables/${tableId}/columns`, {
+        const r = await fetch(`${url}/api/v1/db/meta/tables/${tableId}/columns`, {
           method: 'POST',
           headers: { 'xc-token': token, 'Content-Type': 'application/json' },
           body: JSON.stringify(col)
