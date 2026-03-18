@@ -1,4 +1,4 @@
-const CACHE_NAME = 'parity-v3';
+const CACHE_NAME = 'parity-v4';
 const ASSETS = [
   '/',
   '/index.html',

@@ -1450,47 +1450,70 @@ const App = {
     ];
 
     statusEl.style.color = 'var(--gray-500)';
-    statusEl.textContent = 'Fetching existing columns…';
+    statusEl.textContent = 'Finding correct API path…';
+
+    // NocoDB has changed its meta API paths across versions — try each until one works
+    const candidatePaths = [
+      `${url}/api/v1/db/meta/tables/${tableId}/columns`,
+      `${url}/api/v2/meta/tables/${tableId}/columns`,
+      `${url}/api/v2/tables/${tableId}/fields`,
+      `${url}/api/v1/meta/tables/${tableId}/columns`,
+    ];
 
     try {
-      // Get existing columns
-      const colRes = await fetch(`${url}/api/v1/db/meta/tables/${tableId}/columns`, {
-        headers: { 'xc-token': token }
-      });
-      if (!colRes.ok) {
+      // Probe which path works by POSTing a harmless duplicate column name
+      // (NocoDB returns 200 on create, 422/400 on duplicate, 404 if path wrong)
+      let workingPath = null;
+      for (const path of candidatePaths) {
+        try {
+          const probe = await fetch(path, {
+            method: 'POST',
+            headers: { 'xc-token': token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Address', uidt: 'SingleLineText' }),
+          });
+          // 200 = created, 422/400/409 = already exists (path works!) — either way path is valid
+          // 404 = wrong path, 401/403 = auth error (path might be right, stop)
+          if (probe.status !== 404) {
+            workingPath = path;
+            if (probe.status === 401 || probe.status === 403) {
+              statusEl.style.color = 'var(--red)';
+              statusEl.textContent = `❌ Auth error (${probe.status}). Check your API token has write access.`;
+              return;
+            }
+            break;
+          }
+        } catch { /* network error on this path, try next */ }
+      }
+
+      if (!workingPath) {
         statusEl.style.color = 'var(--red)';
-        statusEl.textContent = `❌ Could not fetch columns (${colRes.status}). Check connection.`;
-        return;
-      }
-      const colData = await colRes.json();
-      const existing = new Set((colData.list || []).map(c => c.title));
-
-      const missing = wanted.filter(c => !existing.has(c.title));
-      if (!missing.length) {
-        statusEl.style.color = 'var(--green)';
-        statusEl.textContent = '✅ All columns already exist!';
+        statusEl.textContent = '❌ Could not find NocoDB columns API. Your NocoDB version may not support this.';
         return;
       }
 
-      statusEl.textContent = `Creating ${missing.length} missing columns…`;
-      let created = 0, failed = 0;
-      for (const col of missing) {
-        const r = await fetch(`${url}/api/v1/db/meta/tables/${tableId}/columns`, {
-          method: 'POST',
-          headers: { 'xc-token': token, 'Content-Type': 'application/json' },
-          body: JSON.stringify(col)
-        });
-        if (r.ok) created++;
-        else failed++;
-        statusEl.textContent = `Creating columns… ${created + failed}/${missing.length}`;
+      statusEl.textContent = `Creating ${wanted.length} columns…`;
+      let created = 0, skipped = 0, failed = 0;
+
+      for (const col of wanted) {
+        try {
+          const r = await fetch(workingPath, {
+            method: 'POST',
+            headers: { 'xc-token': token, 'Content-Type': 'application/json' },
+            body: JSON.stringify(col),
+          });
+          if (r.ok) created++;
+          else if (r.status === 422 || r.status === 400 || r.status === 409) skipped++; // already exists
+          else failed++;
+        } catch { failed++; }
+        statusEl.textContent = `Creating columns… ${created + skipped + failed}/${wanted.length}`;
       }
 
       if (failed === 0) {
         statusEl.style.color = 'var(--green)';
-        statusEl.textContent = `✅ Created ${created} columns successfully!`;
+        statusEl.textContent = `✅ Done! Created ${created} new columns${skipped ? `, ${skipped} already existed` : ''}.`;
       } else {
         statusEl.style.color = 'var(--red)';
-        statusEl.textContent = `⚠️ Created ${created}, failed ${failed}. Check NocoDB permissions.`;
+        statusEl.textContent = `⚠️ Created ${created}, skipped ${skipped}, failed ${failed}.`;
       }
     } catch(e) {
       statusEl.style.color = 'var(--red)';
