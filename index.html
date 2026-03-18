@@ -1367,40 +1367,101 @@ const App = {
     if (insp.waterMeterPresent === 'No') actions.push('Apply for water meter install w/ DPW');
     if (insp.hazardsPresent === 'Yes' && insp.hazardsToPedestrians) actions.push(`Hazards to pedestrians: ${insp.hazardsToPedestrians} [Urgent]`);
     if (Array.isArray(insp.squatterSigns) && insp.squatterSigns.length > 0) actions.push('Initiate eviction procedures [Urgent]');
+    // Collect all photo URLs from the photos object (https:// only — no base64)
+    const allPhotoUrls = Object.values(insp.photos || {})
+      .flat()
+      .filter(src => src && src.startsWith('https://'));
+
     return {
-      'Address':                    v(insp.address),
-      'Neighborhood':               v(insp.neighborhood),
-      'Inspector':                  v(insp.inspectorName),
-      'Inspection Date':            v(insp.inspectionDate),
-      'Submitted At':               v(insp.submittedAt),
-      'Structural Damage':          v(insp.structuralDamage),
-      'Historical Fabric':          v(insp.historicalFabric),
-      'Elevation Height 1st Floor': v(insp.elevationHeight1stFloor),
-      'Elevation Height 2nd Floor': v(insp.elevationHeight2ndFloor),
-      'Elevation Height 3rd Floor': v(insp.elevationHeight3rdFloor),
-      'Facade Condition':           v(insp.facadeCondition),
-      'Front Door Condition':       v(insp.frontDoorCondition),
-      'Front Padlock':              v(insp.frontPadlock),
-      'Front Windows':              v(insp.frontWindowsCondition),
-      'Rear Door Condition':        v(insp.rearDoorCondition),
-      'Rear Padlock':               v(insp.rearPadlock),
-      'Rear Window Condition':      v(insp.rearWindowCondition),
-      'Roof Condition':             v(insp.roofCondition),
-      'Electrical Line Location':   v(insp.electricalLineLocation),
-      'Electrical Line Elevation':  v(insp.electricalLineElevation),
-      'Sewer Line Location':        v(insp.sewerLineLocation),
-      'Water Line - City Side':     v(insp.waterLineCitySide),
-      'Water Line - House Side':    v(insp.waterLineHouseSide),
-      'Water Meter Present':        v(insp.waterMeterPresent),
-      'Back Yard Condition':        arr(insp.backYardCondition),
-      'Hazards to Pedestrians':     v(insp.hazardsPresent),
-      'Hazard Description':         v(insp.hazardsToPedestrians),
-      'Squatter Signs':             arr(insp.squatterSigns),
-      'Squatter Notes':             v(insp.squatterOther),
-      'Action Items':               actions.join('\n'),
-      'Notes':                      v(insp.notes),
-      'App Record ID':              v(insp.id),
-      'Photo URLs':                 (insp.photoUrls || []).join('\n'),
+      // Property
+      'Address':                        v(insp.address),
+      'Neighborhood':                   v(insp.neighborhood),
+      'Inspector':                      v(insp.inspectorName),
+      'Inspection Date':                v(insp.inspectionDate),
+      'Submitted At':                   v(insp.submittedAt),
+
+      // Structure & Overview
+      'Structural Damage':              v(insp.structuralDamage),
+      'Structural Damage Next Steps':   v(insp.structuralDamageNextSteps),
+      'Structural Damage Urgency':      v(insp.structuralDamageUrgency),
+      'Historical Fabric':              v(insp.historicalFabric),
+      'Elevation Height 1st Floor':     v(insp.elevationHeight1stFloor),
+      'Elevation Height 2nd Floor':     v(insp.elevationHeight2ndFloor),
+      'Elevation Height 3rd Floor':     v(insp.elevationHeight3rdFloor),
+      'Notes':                          v(insp.notes),
+
+      // Facade
+      'Facade Condition':               v(insp.facadeCondition),
+      'Facade Condition Next Steps':    v(insp.facadeConditionNextSteps),
+      'Facade Condition Urgency':       v(insp.facadeConditionUrgency),
+      'Facade Material':                v(insp.facadeMaterial),
+      'Cornice Condition':              v(insp.corniceCondition),
+      'Cornice Condition Next Steps':   v(insp.corniceConditionNextSteps),
+      'Cornice Condition Urgency':      v(insp.corniceConditionUrgency),
+      'Cornice Material':               v(insp.corniceMaterial),
+      'Cornice Other':                  v(insp.corniceOther),
+
+      // Front Entry
+      'Front Door Condition':           v(insp.frontDoorCondition),
+      'Front Door Condition Next Steps':v(insp.frontDoorConditionNextSteps),
+      'Front Door Condition Urgency':   v(insp.frontDoorConditionUrgency),
+      'Front Door Material':            v(insp.frontDoorMaterial),
+      'Door Surround Condition':        v(insp.doorSurroundCondition),
+      'Door Surround Condition Next Steps': v(insp.doorSurroundConditionNextSteps),
+      'Door Surround Condition Urgency':v(insp.doorSurroundConditionUrgency),
+      'Door Surround Material':         v(insp.doorSurroundMaterial),
+      'Front Padlock':                  v(insp.frontPadlock),
+      'Front Windows':                  v(insp.frontWindowsCondition),
+      'Front Windows 1st Floor':        arr(insp.frontWindows1stFloor),
+      'English Basement':               v(insp.englishBasement),
+      'Eng Basement Door Material':     v(insp.engBasementDoorMaterial),
+
+      // Rear
+      'Rear Wall Condition':            v(insp.rearWallCondition),
+      'Rear Wall Condition Next Steps': v(insp.rearWallConditionNextSteps),
+      'Rear Wall Condition Urgency':    v(insp.rearWallConditionUrgency),
+      'Rear Wall Config':               v(insp.rearWallConfig),
+      'LP Wall Condition':              v(insp.lpWallCondition),
+      'LP Wall Condition Next Steps':   v(insp.lpWallConditionNextSteps),
+      'LP Wall Condition Urgency':      v(insp.lpWallConditionUrgency),
+      'LP Wall Material':               arr(insp.lpWallMaterial),
+      'Rear Door Condition':            v(insp.rearDoorCondition),
+      'Rear Door Condition Next Steps': v(insp.rearDoorConditionNextSteps),
+      'Rear Door Condition Urgency':    v(insp.rearDoorConditionUrgency),
+      'Rear Door Material':             v(insp.rearDoorMaterial),
+      'Rear Padlock':                   v(insp.rearPadlock),
+      'Rear Window Condition':          v(insp.rearWindowCondition),
+      'Rear Windows 1st Floor':         v(insp.rearWindows1stFloor),
+
+      // Roof & Utilities
+      'Roof Condition':                 v(insp.roofCondition),
+      'Roof Condition Next Steps':      v(insp.roofConditionNextSteps),
+      'Roof Condition Urgency':         v(insp.roofConditionUrgency),
+      'Roof Style':                     v(insp.roofStyle),
+      'Electrical Line Location':       v(insp.electricalLineLocation),
+      'Electrical Line Elevation':      v(insp.electricalLineElevation),
+      'Gas Line Location':              v(insp.gasLineLocation),
+      'Water Line Location':            v(insp.waterLineLocation),
+      'Sewer Line Location':            v(insp.sewerLineLocation),
+      'Water Line - City Side':         v(insp.waterLineCitySide),
+      'Water Line - House Side':        v(insp.waterLineHouseSide),
+      'Water Meter Present':            v(insp.waterMeterPresent),
+
+      // Site
+      'Back Yard Condition':            arr(insp.backYardCondition),
+      'Hazards to Pedestrians':         v(insp.hazardsPresent),
+      'Hazard Description':             v(insp.hazardsToPedestrians),
+      'Squatter Signs':                 arr(insp.squatterSigns),
+      'Squatter Signs Next Steps':      v(insp.squatterSignsNextSteps),
+      'Squatter Signs Urgency':         v(insp.squatterSignsUrgency),
+      'Squatter Notes':                 v(insp.squatterOther),
+
+      // Summary
+      'Action Items':                   actions.join('\n'),
+      'App Record ID':                  v(insp.id),
+
+      // Photos — all Blob URLs across all sections
+      'Photo URLs':                     allPhotoUrls.join('\n'),
     };
   },
 
