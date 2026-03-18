@@ -1492,7 +1492,8 @@ const App = {
       }
 
       statusEl.textContent = `Creating ${wanted.length} columns…`;
-      let created = 0, skipped = 0, failed = 0;
+      let created = 0, skipped = 0;
+      const failedCols = [];
 
       for (const col of wanted) {
         try {
@@ -1501,19 +1502,26 @@ const App = {
             headers: { 'xc-token': token, 'Content-Type': 'application/json' },
             body: JSON.stringify(col),
           });
-          if (r.ok) created++;
-          else if (r.status === 422 || r.status === 400 || r.status === 409) skipped++; // already exists
-          else failed++;
-        } catch { failed++; }
-        statusEl.textContent = `Creating columns… ${created + skipped + failed}/${wanted.length}`;
+          if (r.ok) {
+            created++;
+          } else if (r.status === 422 || r.status === 400 || r.status === 409) {
+            skipped++; // already exists
+          } else {
+            const body = await r.json().catch(() => ({}));
+            failedCols.push({ title: col.title, status: r.status, msg: body.msg || body.message || '' });
+          }
+        } catch(e) {
+          failedCols.push({ title: col.title, status: 'err', msg: e.message });
+        }
+        statusEl.textContent = `Creating columns… ${created + skipped + failedCols.length}/${wanted.length}`;
       }
 
-      if (failed === 0) {
+      if (failedCols.length === 0) {
         statusEl.style.color = 'var(--green)';
         statusEl.textContent = `✅ Done! Created ${created} new columns${skipped ? `, ${skipped} already existed` : ''}.`;
       } else {
         statusEl.style.color = 'var(--red)';
-        statusEl.textContent = `⚠️ Created ${created}, skipped ${skipped}, failed ${failed}.`;
+        statusEl.textContent = `⚠️ Created ${created}, skipped ${skipped}, failed ${failedCols.length}: ${failedCols.map(f => `"${f.title}" (${f.status}${f.msg ? ': ' + f.msg : ''})`).join(' | ')}`;
       }
     } catch(e) {
       statusEl.style.color = 'var(--red)';
