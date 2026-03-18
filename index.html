@@ -1231,20 +1231,37 @@ const App = {
       async () => {
         this.current.submittedAt = new Date().toISOString();
         this.saveDraft();
+
+        // Capture a stable reference NOW — backToHome() will null out this.current
+        const insp = JSON.parse(JSON.stringify(this.current));
+
         this.showToast('✅ Inspection submitted!');
         setTimeout(() => this.backToHome(), 1200);
 
-        // Upload photos to Vercel Blob first, then sync and email
-        const photoUploadResult = await this.uploadPhotosToBlob(this.current);
-        if (photoUploadResult.urls && photoUploadResult.urls.length) {
-          this.current.photoUrls = photoUploadResult.urls;
-          this.saveDraft();
-          setTimeout(() => this.showToast('🖼 Photos uploaded'), 1800);
+        // Any photos still stored as base64 (e.g. captured offline) — upload them now
+        const base64Photos = [];
+        Object.entries(insp.photos || {}).forEach(([key, imgs]) => {
+          imgs.forEach((src, i) => {
+            if (src && src.startsWith('data:image/')) {
+              base64Photos.push({ key, i, src });
+            }
+          });
+        });
+        if (base64Photos.length) {
+          const uploadResult = await this.uploadPhotosToBlob({ id: insp.id, photos: Object.fromEntries(
+            Object.entries(insp.photos).map(([k, arr]) => [k, arr.filter(s => s.startsWith('data:image/'))])
+          )});
+          if (uploadResult.urls && uploadResult.urls.length) {
+            let urlIdx = 0;
+            base64Photos.forEach(({ key, i }) => {
+              if (insp.photos[key]) insp.photos[key][i] = uploadResult.urls[urlIdx++] || insp.photos[key][i];
+            });
+          }
         }
 
         const [syncResult, emailResult] = await Promise.all([
-          this.syncToNocoDB(this.current),
-          this.sendReportEmail(this.current)
+          this.syncToNocoDB(insp),
+          this.sendReportEmail(insp)
         ]);
 
         if (syncResult.reason !== 'not-configured' && !syncResult.ok) {
@@ -1503,12 +1520,15 @@ const App = {
 
   async sendReportEmail(insp) {
     try {
-      // Strip photos before sending — base64 images are too large for an API payload
-      const { photos, ...inspData } = insp;
+      // Send only URL photos to keep payload small — strip any remaining base64
+      const urlOnlyPhotos = {};
+      Object.entries(insp.photos || {}).forEach(([key, arr]) => {
+        urlOnlyPhotos[key] = (arr || []).filter(src => src && src.startsWith('https://'));
+      });
       const res = await fetch('/api/send-report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(inspData)
+        body: JSON.stringify({ ...insp, photos: urlOnlyPhotos })
       });
       return { ok: res.ok, status: res.status };
     } catch(e) {
