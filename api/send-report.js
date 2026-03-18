@@ -68,6 +68,60 @@ function buildActionItems(insp) {
   return items.sort((a, b) => (b.urgent ? 1 : 0) - (a.urgent ? 1 : 0));
 }
 
+const PHOTO_LABELS = {
+  property: 'Property',
+  frontFacade: 'Front Facade',
+  structuralDamage: 'Structural Damage',
+  historicalFabric: 'Historical Fabric',
+  facade: 'Facade',
+  facadeCondition: 'Facade Condition',
+  corniceCondition: 'Cornice',
+  frontEntry: 'Front Entry',
+  frontDoorCondition: 'Front Door',
+  frontWindowsCondition: 'Front Windows',
+  rear: 'Rear',
+  rearWallCondition: 'Rear Wall',
+  rearDoorCondition: 'Rear Door',
+  rearWindowCondition: 'Rear Windows',
+  roof: 'Roof',
+  roofCondition: 'Roof Condition',
+  utilities: 'Utilities',
+  site: 'Site',
+  backYardCondition: 'Back Yard',
+  squatterSigns: 'Squatter Signs',
+  notes: 'Notes',
+};
+
+function buildPhotosSection(insp) {
+  const photos = insp.photos || {};
+  const entries = Object.entries(photos).filter(([, arr]) =>
+    Array.isArray(arr) && arr.some(src => src && src.startsWith('https://'))
+  );
+  if (!entries.length) return '';
+
+  const photoRows = entries.map(([key, arr]) => {
+    const urls = arr.filter(src => src && src.startsWith('https://'));
+    if (!urls.length) return '';
+    const label = PHOTO_LABELS[key] || key;
+    const imgs = urls.map(url =>
+      `<img src="${url}" alt="${label}" width="220" height="165" style="width:220px;height:165px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;display:inline-block;">`
+    ).join('&nbsp;');
+    return `
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">${label}</div>
+        <div>${imgs}</div>
+      </div>`;
+  }).filter(Boolean).join('');
+
+  if (!photoRows) return '';
+
+  return `
+    <div style="margin-bottom:24px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#1a4fa0;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid #eff6ff">Photos</div>
+      ${photoRows}
+    </div>`;
+}
+
 function buildEmailHTML(insp) {
   const date = insp.inspectionDate
     ? new Date(insp.inspectionDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
@@ -120,6 +174,9 @@ function buildEmailHTML(insp) {
     ${section('Structure & Overview',
       row('Structural Damage', v(insp.structuralDamage)) +
       row('Historical Fabric', v(insp.historicalFabric)) +
+      row('Elevation — 1st Floor', v(insp.elevationHeight1stFloor)) +
+      row('Elevation — 2nd Floor', v(insp.elevationHeight2ndFloor)) +
+      row('Elevation — 3rd Floor', v(insp.elevationHeight3rdFloor)) +
       (insp.notes ? row('Notes', v(insp.notes)) : '')
     )}
 
@@ -160,6 +217,8 @@ function buildEmailHTML(insp) {
       row('Squatter Signs', arr(insp.squatterSigns)) +
       (insp.squatterOther ? row('Squatter Notes', v(insp.squatterOther)) : '')
     )}
+
+    ${buildPhotosSection(insp)}
 
   </div>
 
