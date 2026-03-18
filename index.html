@@ -618,6 +618,7 @@ body {
       </div>
 
       <button class="btn btn-secondary" style="width:100%;margin-bottom:8px" onclick="App.testNocoDB()">🔌 Test Connection</button>
+      <button class="btn btn-secondary" style="width:100%;margin-bottom:8px" onclick="App.setupNocoDBColumns()">🏗️ Set Up Columns in NocoDB</button>
       <div class="settings-status" id="settingsStatus"></div>
 
       <hr class="settings-divider">
@@ -1362,6 +1363,143 @@ const App = {
     } catch(e) {
       statusEl.style.color = 'var(--red)';
       statusEl.textContent = '❌ Could not reach NocoDB. Check the URL.';
+    }
+  },
+
+  async setupNocoDBColumns() {
+    const statusEl = document.getElementById('settingsStatus');
+    const url = document.getElementById('settingsUrl').value.trim().replace(/\/$/, '');
+    const token = document.getElementById('settingsToken').value.trim();
+    const tableId = document.getElementById('settingsTableId').value.trim();
+    if (!url || !token || !tableId) {
+      statusEl.style.color = 'var(--red)';
+      statusEl.textContent = '⚠️ Please fill in all three fields first.';
+      return;
+    }
+
+    // Full list of columns matching buildNocoDBRecord()
+    const T = 'SingleLineText', L = 'LongText';
+    const wanted = [
+      { title: 'Address', uidt: T },
+      { title: 'Neighborhood', uidt: T },
+      { title: 'Inspector', uidt: T },
+      { title: 'Inspection Date', uidt: T },
+      { title: 'Submitted At', uidt: T },
+      { title: 'Structural Damage', uidt: T },
+      { title: 'Structural Damage Next Steps', uidt: L },
+      { title: 'Structural Damage Urgency', uidt: T },
+      { title: 'Historical Fabric', uidt: T },
+      { title: 'Elevation Height 1st Floor', uidt: T },
+      { title: 'Elevation Height 2nd Floor', uidt: T },
+      { title: 'Elevation Height 3rd Floor', uidt: T },
+      { title: 'Notes', uidt: L },
+      { title: 'Facade Condition', uidt: T },
+      { title: 'Facade Condition Next Steps', uidt: L },
+      { title: 'Facade Condition Urgency', uidt: T },
+      { title: 'Facade Material', uidt: T },
+      { title: 'Cornice Condition', uidt: T },
+      { title: 'Cornice Condition Next Steps', uidt: L },
+      { title: 'Cornice Condition Urgency', uidt: T },
+      { title: 'Cornice Material', uidt: T },
+      { title: 'Cornice Other', uidt: L },
+      { title: 'Front Door Condition', uidt: T },
+      { title: 'Front Door Condition Next Steps', uidt: L },
+      { title: 'Front Door Condition Urgency', uidt: T },
+      { title: 'Front Door Material', uidt: T },
+      { title: 'Door Surround Condition', uidt: T },
+      { title: 'Door Surround Condition Next Steps', uidt: L },
+      { title: 'Door Surround Condition Urgency', uidt: T },
+      { title: 'Door Surround Material', uidt: T },
+      { title: 'Front Padlock', uidt: T },
+      { title: 'Front Windows', uidt: T },
+      { title: 'Front Windows 1st Floor', uidt: L },
+      { title: 'English Basement', uidt: T },
+      { title: 'Eng Basement Door Material', uidt: T },
+      { title: 'Rear Wall Condition', uidt: T },
+      { title: 'Rear Wall Condition Next Steps', uidt: L },
+      { title: 'Rear Wall Condition Urgency', uidt: T },
+      { title: 'Rear Wall Config', uidt: T },
+      { title: 'LP Wall Condition', uidt: T },
+      { title: 'LP Wall Condition Next Steps', uidt: L },
+      { title: 'LP Wall Condition Urgency', uidt: T },
+      { title: 'LP Wall Material', uidt: L },
+      { title: 'Rear Door Condition', uidt: T },
+      { title: 'Rear Door Condition Next Steps', uidt: L },
+      { title: 'Rear Door Condition Urgency', uidt: T },
+      { title: 'Rear Door Material', uidt: T },
+      { title: 'Rear Padlock', uidt: T },
+      { title: 'Rear Window Condition', uidt: T },
+      { title: 'Rear Windows 1st Floor', uidt: T },
+      { title: 'Roof Condition', uidt: T },
+      { title: 'Roof Condition Next Steps', uidt: L },
+      { title: 'Roof Condition Urgency', uidt: T },
+      { title: 'Roof Style', uidt: T },
+      { title: 'Electrical Line Location', uidt: T },
+      { title: 'Electrical Line Elevation', uidt: T },
+      { title: 'Gas Line Location', uidt: T },
+      { title: 'Water Line Location', uidt: T },
+      { title: 'Sewer Line Location', uidt: T },
+      { title: 'Water Line - City Side', uidt: T },
+      { title: 'Water Line - House Side', uidt: T },
+      { title: 'Water Meter Present', uidt: T },
+      { title: 'Back Yard Condition', uidt: L },
+      { title: 'Hazards to Pedestrians', uidt: T },
+      { title: 'Hazard Description', uidt: L },
+      { title: 'Squatter Signs', uidt: L },
+      { title: 'Squatter Signs Next Steps', uidt: L },
+      { title: 'Squatter Signs Urgency', uidt: T },
+      { title: 'Squatter Notes', uidt: L },
+      { title: 'Action Items', uidt: L },
+      { title: 'App Record ID', uidt: T },
+      { title: 'Photo URLs', uidt: L },
+    ];
+
+    statusEl.style.color = 'var(--gray-500)';
+    statusEl.textContent = 'Fetching existing columns…';
+
+    try {
+      // Get existing columns
+      const colRes = await fetch(`${url}/api/v2/meta/tables/${tableId}/columns`, {
+        headers: { 'xc-token': token }
+      });
+      if (!colRes.ok) {
+        statusEl.style.color = 'var(--red)';
+        statusEl.textContent = `❌ Could not fetch columns (${colRes.status}). Check connection.`;
+        return;
+      }
+      const colData = await colRes.json();
+      const existing = new Set((colData.list || []).map(c => c.title));
+
+      const missing = wanted.filter(c => !existing.has(c.title));
+      if (!missing.length) {
+        statusEl.style.color = 'var(--green)';
+        statusEl.textContent = '✅ All columns already exist!';
+        return;
+      }
+
+      statusEl.textContent = `Creating ${missing.length} missing columns…`;
+      let created = 0, failed = 0;
+      for (const col of missing) {
+        const r = await fetch(`${url}/api/v2/meta/tables/${tableId}/columns`, {
+          method: 'POST',
+          headers: { 'xc-token': token, 'Content-Type': 'application/json' },
+          body: JSON.stringify(col)
+        });
+        if (r.ok) created++;
+        else failed++;
+        statusEl.textContent = `Creating columns… ${created + failed}/${missing.length}`;
+      }
+
+      if (failed === 0) {
+        statusEl.style.color = 'var(--green)';
+        statusEl.textContent = `✅ Created ${created} columns successfully!`;
+      } else {
+        statusEl.style.color = 'var(--red)';
+        statusEl.textContent = `⚠️ Created ${created}, failed ${failed}. Check NocoDB permissions.`;
+      }
+    } catch(e) {
+      statusEl.style.color = 'var(--red)';
+      statusEl.textContent = '❌ Error: ' + e.message;
     }
   },
 
