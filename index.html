@@ -1491,9 +1491,10 @@ const App = {
         return;
       }
 
-      statusEl.textContent = `Creating ${wanted.length} columns…`;
+      statusEl.textContent = `Creating ${wanted.length} columns… (this takes ~30 seconds)`;
       let created = 0, skipped = 0;
       const failedCols = [];
+      const delay = ms => new Promise(res => setTimeout(res, ms));
 
       for (const col of wanted) {
         try {
@@ -1506,6 +1507,17 @@ const App = {
             created++;
           } else if (r.status === 422 || r.status === 400 || r.status === 409) {
             skipped++; // already exists
+          } else if (r.status === 429) {
+            // Rate limited — wait longer and retry once
+            await delay(2000);
+            const retry = await fetch(workingPath, {
+              method: 'POST',
+              headers: { 'xc-token': token, 'Content-Type': 'application/json' },
+              body: JSON.stringify(col),
+            });
+            if (retry.ok) created++;
+            else if (retry.status === 422 || retry.status === 400 || retry.status === 409) skipped++;
+            else { const body = await retry.json().catch(() => ({})); failedCols.push({ title: col.title, status: retry.status, msg: body.msg || body.message || '' }); }
           } else {
             const body = await r.json().catch(() => ({}));
             failedCols.push({ title: col.title, status: r.status, msg: body.msg || body.message || '' });
@@ -1514,6 +1526,7 @@ const App = {
           failedCols.push({ title: col.title, status: 'err', msg: e.message });
         }
         statusEl.textContent = `Creating columns… ${created + skipped + failedCols.length}/${wanted.length}`;
+        await delay(400); // 400ms between requests — well under NocoDB rate limit
       }
 
       if (failedCols.length === 0) {
