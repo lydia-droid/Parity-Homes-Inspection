@@ -4,8 +4,11 @@ const PDFDocument = require('pdfkit');
 const resend = new Resend('re_WtsSJqyr_9bqC4GBzStQ9zCcPVMUR6N5e');
 const RECIPIENTS = [
   'lydia@parityhomes.com',
-  'operations@parityhomes.com',
   'bree@parityhomes.com',
+  'fred@parityhomes.com',
+  'marvin@parityhomes.com',
+  'cayden@parityhomes.com',
+  'fernando@parityhomes.com',
   'coleen@parityhomes.com',
 ];
 
